@@ -82,22 +82,12 @@ handle('connect', async (a) => {
 
   if (a.trustFingerprint && !(await kh.get(a.host, port))) await kh.set(a.host, port, a.trustFingerprint);
 
-  // Elevar já no login é opcional (fallback); o padrão é entrar sem elevar e usar o botão Elevar.
-  const el = a.elevation || {};
-  s.setElevation(el.method || 'none', el.samePassword ? a.password : el.password);
-  if (el.method && el.method !== 'none') {
-    try {
-      await s.testElevation();
-    } catch (e) {
-      s.close();
-      throw e;
-    }
-  }
+  // Sempre entra como usuário comum; a elevação acontece só dentro do app, pelo botão Elevar.
   session = s;
   ops = new Ops(s, { policy: await loadPolicy(), audit: audit(), tecnico: a.tecnico.trim(), host: a.host.trim() });
   const info = await ops.sysinfo();
-  await audit().write({ tecnico: ops.tecnico, host: ops.host, op: 'conectar', summary: `Conectou como ${info.user} (elevação: ${el.method || 'nenhuma'})`, ok: true });
-  return { ...info, elevation: el.method || 'none', policy: ops.policy };
+  await audit().write({ tecnico: ops.tecnico, host: ops.host, op: 'conectar', summary: `Conectou como ${info.user}`, ok: true });
+  return { ...info, elevation: 'none', policy: ops.policy };
 });
 
 handle('disconnect', async () => {

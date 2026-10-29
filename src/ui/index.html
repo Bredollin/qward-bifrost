@@ -55,19 +55,6 @@
         </label>
       </div>
 
-      <fieldset class="seg">
-        <legend>Elevação</legend>
-        <label><input type="radio" name="elev" value="none" checked> Depois (botão Elevar)</label>
-        <label><input type="radio" name="elev" value="sudo"> sudo</label>
-        <label><input type="radio" name="elev" value="su"> su</label>
-      </fieldset>
-      <div data-elev="sudo">
-        <label class="check"><input type="checkbox" name="samePassword" checked> A senha do sudo é a mesma do login</label>
-      </div>
-      <label data-elev="pw" hidden><span id="elev-label">Senha de elevação</span>
-        <input name="elevPassword" type="password">
-      </label>
-
       <p id="login-erro" class="erro" role="alert" hidden></p>
       <button class="btn primary big" id="btn-conectar" type="submit">Conectar</button>
       <p class="muted small">As senhas ficam só na memória enquanto o programa está aberto. Nada é instalado no servidor.</p>

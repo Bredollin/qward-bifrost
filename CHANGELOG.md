@@ -10,7 +10,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Versões: 
 - Alteração sem elevação abre a janela de elevar antes de continuar.
 
 ### Alterado
-- Login: o padrão agora é "Depois (botão Elevar)"; elevar já no login (sudo ou su) continua como opção.
+- Login: sempre como usuário comum; a opção de elevar na tela de login saiu (elevação só dentro do app).
 - Cores da Qward (verde-escuro, verde vivo e laranja do site qward.com.br), logo em losango e novo lema no topo. Textos de elevação curtos e técnicos ("root", "user", "sudo", "su").
 
 ## [0.1.0] - 2026-10-29

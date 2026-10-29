@@ -40,12 +40,8 @@ function status(msg, isErr = false) {
 const form = $('#form-login');
 
 function syncLogin() {
-  const auth = form.auth.value, elev = form.elev.value;
+  const auth = form.auth.value;
   $$('[data-auth]').forEach((n) => (n.hidden = n.dataset.auth !== auth));
-  $('[data-elev="sudo"]').hidden = !(elev === 'sudo' && auth === 'senha');
-  const needPw = elev === 'su' || (elev === 'sudo' && (auth === 'chave' || !form.samePassword.checked));
-  $('[data-elev="pw"]').hidden = !needPw;
-  $('#elev-label').textContent = 'root';
 }
 form.addEventListener('change', syncLogin);
 syncLogin();
@@ -56,14 +52,12 @@ $('#btn-chave').addEventListener('click', async () => {
 });
 
 async function doConnect(trustFingerprint) {
-  const auth = form.auth.value, elev = form.elev.value;
-  const same = elev === 'sudo' && auth === 'senha' && form.samePassword.checked;
+  const auth = form.auth.value;
   return api('connect', {
     tecnico: form.tecnico.value, host: form.host.value, port: form.port.value, username: form.username.value,
     password: auth === 'senha' ? form.password.value : undefined,
     keyPath: auth === 'chave' ? form.keyPath.value : undefined,
     passphrase: auth === 'chave' ? form.passphrase.value : undefined,
-    elevation: { method: elev, samePassword: same, password: same ? undefined : form.elevPassword.value },
     trustFingerprint,
   });
 }
@@ -84,7 +78,7 @@ form.addEventListener('submit', async (ev) => {
       if (!ok) throw new Error('Conexão cancelada.');
       info = await doConnect(e.fingerprint);
     }
-    form.password.value = form.elevPassword.value = form.passphrase.value = '';
+    form.password.value = form.passphrase.value = '';
     enterApp(info);
   } catch (e) {
     err.textContent = e.message;
