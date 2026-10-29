@@ -1,0 +1,45 @@
+{
+  "name": "qward-bifrost",
+  "version": "0.1.0",
+  "description": "Interface gráfica para gerenciar pastas, permissões, usuários e grupos em servidores Linux via SSH, sem instalar nada no servidor.",
+  "main": "src/main.mjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/core.test.mjs",
+    "test:ui": "node test/ui.test.mjs",
+    "dist": "electron-builder --win portable --x64"
+  },
+  "author": "Qward Tecnologia",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "ssh2": "^1.17.0"
+  },
+  "devDependencies": {
+    "electron": "^38.8.6",
+    "electron-builder": "^26.18.0"
+  },
+  "productName": "Qward Bifrost",
+  "private": true,
+  "build": {
+    "appId": "br.com.qward.bifrost",
+    "productName": "Qward Bifrost",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!node_modules/cpu-features/**",
+      "!node_modules/ssh2/lib/protocol/crypto/build/**"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.png",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "QwardBifrost-${version}-portable.exe"
+    },
+    "npmRebuild": false
+  }
+}

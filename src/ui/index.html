@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <title>Qward Bifrost</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="bifrost-bar"></div>
+
+  <!-- Tela de conexão -->
+  <main id="tela-login" class="login">
+    <form id="form-login" class="card login-card" autocomplete="off">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Qward Bifrost</h1>
+          <p class="muted">A ponte até os servidores Linux, sem terminal.</p>
+        </div>
+      </div>
+
+      <label>Seu nome <span class="hint">vai para o registro de ações</span>
+        <input name="tecnico" required placeholder="Ex.: Ana">
+      </label>
+      <div class="row">
+        <label class="grow">Servidor (IP ou nome)
+          <input name="host" required placeholder="192.0.2.10">
+        </label>
+        <label class="port">Porta
+          <input name="port" type="number" value="22" min="1" max="65535">
+        </label>
+      </div>
+      <label>Usuário SSH
+        <input name="username" required placeholder="usuário de manutenção">
+      </label>
+
+      <fieldset class="seg">
+        <legend>Entrar com</legend>
+        <label><input type="radio" name="auth" value="senha" checked> Senha</label>
+        <label><input type="radio" name="auth" value="chave"> Chave SSH</label>
+      </fieldset>
+      <label data-auth="senha">Senha
+        <input name="password" type="password">
+      </label>
+      <div data-auth="chave" hidden>
+        <div class="row">
+          <label class="grow">Arquivo da chave
+            <input name="keyPath" readonly placeholder="nenhum arquivo">
+          </label>
+          <button type="button" id="btn-chave" class="btn">Escolher…</button>
+        </div>
+        <label>Frase da chave <span class="hint">se tiver</span>
+          <input name="passphrase" type="password">
+        </label>
+      </div>
+
+      <fieldset class="seg">
+        <legend>Elevar permissões (para alterar arquivos e usuários)</legend>
+        <label><input type="radio" name="elev" value="sudo" checked> sudo</label>
+        <label><input type="radio" name="elev" value="su"> su (senha do root)</label>
+        <label><input type="radio" name="elev" value="none"> Não elevar</label>
+      </fieldset>
+      <div data-elev="sudo">
+        <label class="check"><input type="checkbox" name="samePassword" checked> A senha do sudo é a mesma do login</label>
+      </div>
+      <label data-elev="pw" hidden><span id="elev-label">Senha de elevação</span>
+        <input name="elevPassword" type="password">
+      </label>
+
+      <p id="login-erro" class="erro" role="alert" hidden></p>
+      <button class="btn primary big" id="btn-conectar" type="submit">Conectar</button>
+      <p class="muted small">As senhas ficam só na memória enquanto o programa está aberto. Nada é instalado no servidor.</p>
+    </form>
+  </main>
+
+  <!-- Tela principal -->
+  <div id="tela-app" class="app" hidden>
+    <header class="top">
+      <div class="brand small">
+        <div class="logo" aria-hidden="true"></div>
+        <strong>Qward Bifrost</strong>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="arquivos" class="active">Arquivos</button>
+        <button role="tab" data-tab="usuarios">Usuários e grupos</button>
+        <button role="tab" data-tab="registro">Registro</button>
+      </nav>
+      <div class="server">
+        <span id="srv-info" class="chip"></span>
+        <span id="srv-elev" class="chip"></span>
+        <button class="btn ghost" id="btn-sair">Desconectar</button>
+      </div>
+    </header>
+
+    <section id="tab-arquivos" class="tab">
+      <div class="toolbar">
+        <button class="btn icon" id="btn-subir" title="Pasta acima">↑</button>
+        <form id="form-caminho" class="pathbar"><input id="caminho" spellcheck="false" aria-label="Caminho"></form>
+        <button class="btn icon" id="btn-atualizar" title="Atualizar">⟳</button>
+        <label class="check small"><input type="checkbox" id="ver-root"> Ver como root</label>
+      </div>
+      <div class="toolbar actions">
+        <button class="btn" id="btn-nova-pasta">＋ Nova pasta</button>
+        <button class="btn" data-need-sel id="btn-mover">Renomear / mover</button>
+        <button class="btn" data-need-sel id="btn-permissoes">Permissões</button>
+        <button class="btn" data-need-sel id="btn-dono">Dono e grupo</button>
+        <span class="spacer"></span>
+        <span class="muted small" id="area-permitida"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="files">
+          <thead><tr><th>Nome</th><th>Permissões</th><th>Dono</th><th>Grupo</th><th class="num">Tamanho</th><th>Modificado</th></tr></thead>
+          <tbody id="lista"></tbody>
+        </table>
+        <p id="lista-vazia" class="empty" hidden>Pasta vazia.</p>
+      </div>
+    </section>
+
+    <section id="tab-usuarios" class="tab" hidden>
+      <div class="toolbar actions">
+        <button class="btn" id="btn-novo-usuario">＋ Novo usuário</button>
+        <button class="btn" id="btn-novo-grupo">＋ Novo grupo</button>
+        <button class="btn" id="btn-add-grupo">Colocar usuário em grupo</button>
+        <button class="btn" id="btn-senha">Definir senha</button>
+        <span class="spacer"></span>
+        <label class="check small"><input type="checkbox" id="so-pessoas" checked> Só pessoas (esconder contas do sistema)</label>
+      </div>
+      <div class="split">
+        <div class="table-wrap"><table><thead><tr><th>Usuário</th><th class="num">UID</th><th>Pasta pessoal</th><th>Shell</th></tr></thead><tbody id="lista-usuarios"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Grupo</th><th class="num">GID</th><th>Membros</th></tr></thead><tbody id="lista-grupos"></tbody></table></div>
+      </div>
+    </section>
+
+    <section id="tab-registro" class="tab" hidden>
+      <p class="muted small">Tudo o que foi feito por este computador, mais recente primeiro. Arquivo local: registro-de-acoes.jsonl.</p>
+      <div class="table-wrap"><table><thead><tr><th>Quando</th><th>Técnico</th><th>Servidor</th><th>Ação</th><th>Resultado</th></tr></thead><tbody id="lista-registro"></tbody></table></div>
+    </section>
+
+    <footer class="status" id="status" role="status"></footer>
+  </div>
+
+  <!-- Janelas -->
+  <dialog id="dlg">
+    <form method="dialog" id="dlg-form">
+      <h2 id="dlg-title"></h2>
+      <div id="dlg-body"></div>
+      <p id="dlg-erro" class="erro" hidden></p>
+      <menu>
+        <button class="btn ghost" value="cancel" formnovalidate id="dlg-cancel">Cancelar</button>
+        <button class="btn primary" value="ok" id="dlg-ok">Continuar</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <template id="tpl-perm">
+    <p class="muted" id="perm-alvo"></p>
+    <table class="perm-grid">
+      <thead><tr><th></th><th>Ler</th><th>Escrever</th><th>Entrar/Executar</th></tr></thead>
+      <tbody>
+        <tr><th>Dono</th><td><input type="checkbox" data-b="256"></td><td><input type="checkbox" data-b="128"></td><td><input type="checkbox" data-b="64"></td></tr>
+        <tr><th>Grupo</th><td><input type="checkbox" data-b="32"></td><td><input type="checkbox" data-b="16"></td><td><input type="checkbox" data-b="8"></td></tr>
+        <tr><th>Outros</th><td><input type="checkbox" data-b="4"></td><td><input type="checkbox" data-b="2"></td><td><input type="checkbox" data-b="1"></td></tr>
+      </tbody>
+    </table>
+    <label class="check"><input type="checkbox" data-b="1024"> Pastas novas herdam o grupo (setgid) <span class="hint">bom para pastas compartilhadas</span></label>
+    <label>Número (octal)<input name="mode" pattern="[0-7]{3,4}" required class="mono"></label>
+    <label class="check danger"><input type="checkbox" name="recursive"> Aplicar em tudo que está dentro (recursivo)</label>
+  </template>
+</body>
+<script src="app.js"></script>
+</html>
