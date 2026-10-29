@@ -2,6 +2,11 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Versões: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+### Adicionado
+- GitHub Actions gera o .exe no Windows a cada push e publica Release nas tags `v*`.
+
 ## [0.1.0] - 2026-10-29
 
 ### Adicionado
