@@ -8,7 +8,7 @@ Usa um único usuário de manutenção nos servidores. Requisito: conectar com u
 ## Decisão
 Duas formas, escolhidas na janela do botão Elevar: `sudo -S` (senha do usuário, ou outra) e `su` (senha do root, via pseudo-terminal). Leitura roda sem elevação (com "Ver como root" opcional); alteração roda elevada. A elevação é testada ao ligar.
 
-Atualização (2026-10-29): o login é sempre como usuário comum e a elevação acontece só dentro do app, pelo botão **Elevar permissão** (com "Sair do root"). A opção de elevar na tela de login foi removida.
+Atualização (2026-10-29): o login é sempre como usuário comum e a elevação acontece só dentro do app, pelo botão **Elevar para root** (com "Sair do root"), e só por `su` (senha do root). A opção de elevar na tela de login e o sudo na interface foram removidos; o núcleo (`Session`) mantém o suporte a `sudo -S`.
 
 ## Consequências
 - Login direto como root não é necessário (e é desencorajado).

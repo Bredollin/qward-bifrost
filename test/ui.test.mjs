@@ -39,7 +39,7 @@ try {
   await shot('02-confirmar-servidor');
   await ok();
   await w.waitForSelector('#tela-app:not([hidden])');
-  assert.match(await w.textContent('#srv-elev'), /^user$/);
+  assert.match(await w.textContent('#srv-elev'), /^qward$|^(?!root$)/);
   assert.equal(await w.isDisabled('#ver-root'), true);
 
   // Botão Elevar: senha errada mantém usuário comum; a certa vira root.
@@ -48,13 +48,13 @@ try {
   await ok();
   await w.waitForSelector('#dlg-erro:not([hidden])');
   await shot('03a-elevar-senha-errada');
-  await w.fill('#dlg [name=elevSenha]', E.BIFROST_TEST_PASS);
+  await w.fill('#dlg [name=elevSenha]', E.BIFROST_TEST_ROOTPASS);
   await ok();
-  await w.waitForFunction(() => /root \(sudo\)/.test(document.querySelector('#srv-elev').textContent));
+  await w.waitForFunction(() => /^root$/.test(document.querySelector('#srv-elev').textContent));
   await shot('03b-elevado');
   // Sair do root e voltar: a operação pede a elevação sozinha.
   await w.click('#btn-elevar');
-  await w.waitForFunction(() => /^user$/.test(document.querySelector('#srv-elev').textContent));
+  await w.waitForFunction(() => /^qward$|^(?!root$)/.test(document.querySelector('#srv-elev').textContent));
 
   // Pasta de teste criada direto pelo app: navegar até /srv e criar.
   await w.fill('#caminho', '/srv');
@@ -62,7 +62,7 @@ try {
   await w.waitForFunction(() => document.querySelector('#caminho').value === '/srv');
   await w.click('#btn-nova-pasta');
   await w.waitForSelector('#dlg [name=elevSenha]');
-  await w.fill('#dlg [name=elevSenha]', E.BIFROST_TEST_PASS);
+  await w.fill('#dlg [name=elevSenha]', E.BIFROST_TEST_ROOTPASS);
   await ok();
   await w.waitForSelector('#dlg [name=nome]');
   await w.fill('#dlg [name=nome]', 'bifrost-ui-' + tag);

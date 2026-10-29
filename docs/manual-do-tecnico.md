@@ -16,7 +16,7 @@ Dê dois cliques em `QwardBifrost-<versão>-portable.exe`. Não precisa instalar
 | Usuário SSH | o usuário de manutenção da Qward |
 | Senha ou Chave SSH | o que o servidor usa |
 
-O login é sempre como usuário comum. Depois de conectar, o botão laranja **Elevar permissão** (no topo, à direita) pede sudo (senha do usuário) ou su (senha do root). O selo muda de "user" para "root (sudo)" ou "root (su)" e o botão vira **Sair do root**. Se você tentar uma alteração sem elevar, o Bifrost abre essa janela sozinho. Depois de elevar, você continua como root até clicar em **Sair do root** ou desconectar.
+O login é sempre como usuário comum. Depois de conectar, o botão laranja **Elevar para root** (no topo, à direita) troca do usuário de manutenção para root (`su`, pede a senha do root). O selo muda do nome do usuário para "root" e o botão vira **Sair do root**. Se você tentar uma alteração sem elevar, o Bifrost abre essa janela sozinho. Depois de elevar, você continua como root até clicar em **Sair do root** ou desconectar.
 
 Clique em **Conectar**.
 
@@ -76,7 +76,7 @@ A aba **Registro** mostra tudo o que foi feito neste computador: quando, quem, s
 | Mensagem | O que fazer |
 |---|---|
 | Usuário ou senha/chave incorretos | confira e tente de novo |
-| Elevação recusada pelo sudo/su | senha de elevação errada, ou o usuário não tem sudo: tente **su** ou chame o administrador |
+| Elevação recusada pelo su | senha do root errada: confira com o administrador |
 | Bloqueado: ... fora das pastas permitidas | é proposital; pastas do sistema não se mexem pelo Bifrost |
 | Tempo esgotado ao conectar | VPN ligada? Servidor ligado? Porta certa? |
 | Destino já existe | escolha outro nome |

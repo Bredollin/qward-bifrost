@@ -119,10 +119,10 @@ function showElevation(method) {
   state.info.elevation = method;
   const on = method !== 'none';
   const e = $('#srv-elev');
-  e.textContent = on ? `root (${method})` : 'user';
+  e.textContent = on ? 'root' : state.info.user;
   e.classList.toggle('root', on);
   const b = $('#btn-elevar');
-  b.textContent = on ? 'Sair do root' : 'Elevar permissão';
+  b.textContent = on ? 'Sair do root' : 'Elevar para root';
   b.classList.toggle('on', on);
   $('#ver-root').disabled = !on;
   if (!on && $('#ver-root').checked) {
@@ -131,25 +131,21 @@ function showElevation(method) {
   }
 }
 
-// Pede sudo ou su com a sessão já aberta. Retorna true se ficou root.
+// Troca para root (su) com a sessão já aberta. Retorna true se ficou root.
 async function elevate(motivo) {
   const ok = await dialog({
-    title: 'Elevar permissão',
+    title: 'Elevar para root (su)',
     body: [
       motivo ? el('p', { class: 'muted', text: motivo }) : null,
-      el('fieldset', { class: 'seg' },
-        el('legend', { text: 'Como elevar' }),
-        el('label', {}, el('input', { type: 'radio', name: 'metodo', value: 'sudo', checked: true }), ' sudo'),
-        el('label', {}, el('input', { type: 'radio', name: 'metodo', value: 'su' }), ' su')),
-      el('label', {}, 'root',
+      el('label', {}, 'Senha do root',
         el('input', { name: 'elevSenha', type: 'password', required: true })),
       el('p', { class: 'muted small', text: 'A senha fica só na memória até você desconectar ou sair do root.' }),
     ],
     okText: 'Elevar',
     onOk: async (f) => {
-      const method = f.metodo.value, password = f.elevSenha.value;
+      const password = f.elevSenha.value;
       f.elevSenha.value = '';
-      return (await api('elevate', { method, password })).elevation;
+      return (await api('elevate', { method: 'su', password })).elevation;
     },
   });
   if (!ok) return false;

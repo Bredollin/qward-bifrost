@@ -96,10 +96,10 @@ handle('disconnect', async () => {
   session = ops = null;
 });
 
-// Botão Elevar: liga sudo ou su com a sessão já aberta. Se a senha falhar, continua sem elevação.
+// Botão Elevar: troca para root com su. Se a senha falhar, continua sem elevação.
 handle('elevate', async (a) => {
   const o = need();
-  if (!['sudo', 'su'].includes(a.method)) throw new Error('Escolha sudo ou su.');
+  if (a.method !== 'su') throw new Error('Método de elevação inválido.');
   if (!a.password) throw new Error('Informe a senha.');
   session.setElevation(a.method, a.password);
   try {
