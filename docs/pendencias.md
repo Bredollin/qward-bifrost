@@ -5,7 +5,7 @@ Atualizado em 2026-10-29. Em **negrito** o padrão adotado no protótipo.
 ## Decisões em aberto
 
 1. **Pastas permitidas**: padrão `/srv, /home, /var/www, /opt, /mnt, /media, /dados, /data`. Quais pastas os clientes da Qward usam de verdade (ex.: compartilhamentos Samba)?
-2. **Apagar**: **fora na 0.1.0**. Incluir "apagar pasta vazia"? Com lixeira?
+2. **Apagar**: **sem lixeira** (apaga de vez, com nome digitado e `entendo` no recursivo). Vale uma lixeira (mover para uma pasta antes de apagar)?
 3. **Senha salva**: **nada salvo**. Guardar no Cofre do Windows (Credential Manager) por servidor?
 4. **Lista de servidores**: hoje digita o IP toda vez. Criar uma lista de favoritos (sem senha) no PC?
 5. **Registro central**: hoje fica no PC de cada técnico. Mandar cópia para um lugar central (ex.: pasta de rede da Qward)?

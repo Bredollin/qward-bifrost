@@ -261,6 +261,57 @@ $('#btn-nova-pasta').addEventListener('click', () =>
   })
 );
 
+$('#btn-novo-arquivo').addEventListener('click', () =>
+  operation({
+    title: 'Novo arquivo vazio',
+    fields: [field('Nome do arquivo', 'nome', { required: true, placeholder: 'ex.: leia-me.txt' }), field('Permissão (opcional)', 'mode', { placeholder: '660', class: 'mono' })],
+    op: 'touch',
+    args: (f) => ({ path: join(state.cwd, f.nome.value.trim()), mode: f.mode.value.trim() || undefined }),
+  })
+);
+
+$('#btn-apagar').addEventListener('click', () => {
+  const s = selected();
+  const pasta = s.type === 'pasta';
+  const entendo = field('Digite entendo', 'entendo', { autocomplete: 'off', class: 'mono' });
+  entendo.hidden = true;
+  const rec = el('input', { type: 'checkbox', name: 'recursive' });
+  rec.addEventListener('change', () => {
+    entendo.hidden = !rec.checked;
+    $('input', entendo).required = rec.checked;
+  });
+  operation({
+    title: `Apagar "${s.name}"`,
+    fields: [
+      el('p', { class: 'muted', text: `${join(state.cwd, s.name)} (${s.type}). Apagar não tem volta.` }),
+      field(`Digite o nome para confirmar: ${s.name}`, 'confirmName', { required: true, autocomplete: 'off', class: 'mono' }),
+      pasta ? el('label', { class: 'check danger' }, rec, 'Apagar a pasta e TUDO que está dentro (recursivo)') : null,
+      pasta ? entendo : null,
+    ],
+    op: 'rm',
+    args: (f) => ({
+      path: join(state.cwd, s.name),
+      confirmName: f.confirmName.value,
+      recursive: !!f.recursive?.checked,
+      entendo: f.entendo?.value.trim(),
+    }),
+  });
+});
+
+$('#btn-acesso-total').addEventListener('click', async () => {
+  const s = selected();
+  await ensureUsersGroups();
+  operation({
+    title: 'Acesso total',
+    fields: [
+      el('p', { class: 'muted', text: `${join(state.cwd, s.name)} · hoje: ${s.owner}:${s.group}. O usuário vira dono de tudo aí dentro, com ler, gravar e entrar. Não dá sudo nem root.` }),
+      pick('Usuário', 'user', pessoas().filter((u) => u !== 'root'), { required: true }),
+    ],
+    op: 'fullaccess',
+    args: (f) => ({ path: join(state.cwd, s.name), user: f.user.value.trim() }),
+  });
+});
+
 $('#btn-mover').addEventListener('click', () => {
   const s = selected();
   operation({

@@ -82,6 +82,32 @@ export class Ops {
     return mustExist ? real : (real === '/' ? '' : real) + c.slice(c.lastIndexOf('/'));
   }
 
+  // Tipo do item sem seguir atalho (pasta, arquivo, atalho, outro).
+  async kind(path) {
+    const r = await this.s.run(`stat -c %f -- ${q(path)}`, { elevated: this.canElevate });
+    if (r.code !== 0) throw new Error(`Não encontrado: ${path}`);
+    return typeName(r.stdout.trim());
+  }
+
+  // Recursivo não passa por chave SSH nem por disco montado dentro da pasta (ex.: um NAS em /mnt/nas/backup).
+  async guardTree(path) {
+    const r = await this.s.run(
+      `find ${q(path)} -name .ssh -print 2>/dev/null | head -n 1; ` +
+        // ENVIRON não interpreta barra invertida; o /proc/mounts escreve espaço como \040 (tab, quebra e barra também em octal).
+        `P=${q(path)} awk '{ m = $2; gsub(/\\\\040/, " ", m); gsub(/\\\\011/, "\\t", m); gsub(/\\\\012/, "\\n", m); gsub(/\\\\134/, "\\\\", m); ` +
+          `p = ENVIRON["P"]; if (m == p || index(m, p "/") == 1) { print "montagem:" m; exit } }' /proc/mounts 2>/dev/null`,
+      { elevated: this.canElevate }
+    );
+    const hit = r.stdout.trim().split('\n').filter(Boolean)[0];
+    if (hit?.startsWith('montagem:')) throw new Error(`Bloqueado: há um disco montado em ${hit.slice(9)}.`);
+    if (hit) throw new Error(`Bloqueado: ${path} contém chaves SSH (${hit}).`);
+  }
+
+  async count(path) {
+    const r = await this.s.run(`find ${q(path)} 2>/dev/null | wc -l`, { elevated: this.canElevate });
+    return Number(r.stdout.trim()) || 0;
+  }
+
   async plan(op, a) {
     switch (op) {
       case 'mkdir': {
@@ -90,11 +116,44 @@ export class Ops {
         return mk(op, `Criar a pasta ${path}${mode ? ` com permissão ${mode}` : ''}`,
           `mkdir -- ${q(path)}${mode ? ` && chmod ${mode} -- ${q(path)}` : ''}`, 'baixo');
       }
+      case 'touch': {
+        const path = checkWritable(await this.realpath(a.path, { mustExist: false }), this.policy);
+        const mode = a.mode ? cleanMode(a.mode) : null;
+        return mk(op, `Criar o arquivo vazio ${path}${mode ? ` com permissão ${mode}` : ''} (não sobrescreve nada)`,
+          `${notExists(path)}touch -- ${q(path)}${mode ? ` && chmod ${mode} -- ${q(path)}` : ''}`, 'baixo');
+      }
+      case 'rm': {
+        // Só a pasta-mãe é resolvida: se o alvo for um atalho, apaga o atalho, nunca o destino dele.
+        const path = await this.realpath(a.path, { mustExist: false });
+        const name = path.slice(path.lastIndexOf('/') + 1);
+        // A confirmação é conferida aqui também, não só na tela.
+        if (a.confirmName !== name) throw new Error(`Para apagar, digite exatamente o nome: ${name}`);
+        const kind = await this.kind(path);
+        const rec = !!a.recursive && kind === 'pasta';
+        checkWritable(path, this.policy, { recursive: rec });
+        if (rec && a.entendo !== 'entendo') throw new Error('Para apagar a pasta com tudo dentro, digite "entendo".');
+        if (rec) {
+          await this.guardTree(path);
+          const n = await this.count(path);
+          return mk(op, `Apagar a pasta ${path} e TUDO dentro dela (${n} ${n === 1 ? 'item' : 'itens'}). Não tem volta.`, `rm -rf -- ${q(path)}`, 'alto');
+        }
+        const cmd = kind === 'pasta' ? `rmdir -- ${q(path)}` : `rm -f -- ${q(path)}`;
+        return mk(op, `Apagar ${kind === 'pasta' ? 'a pasta vazia' : kind === 'atalho' ? 'o atalho' : 'o arquivo'} ${path}. Não tem volta.`, cmd, 'alto');
+      }
+      case 'fullaccess': {
+        // Acesso total na área permitida: o usuário vira dono e ganha rwx (X: entra nas pastas). Não dá sudo nem root.
+        const user = cleanName(a.user, 'Usuário');
+        if (user === 'root') throw new Error('Bloqueado: use "Dono e grupo" para passar algo ao root.');
+        const path = checkWritable(await this.realpath(a.path), this.policy, { recursive: true });
+        await this.guardTree(path);
+        return mk(op, `Dar acesso total a ${user} em ${path} e TUDO dentro dela (vira dono, com ler, gravar e entrar)`,
+          `chown -R ${q(user)} -- ${q(path)} && chmod -R u+rwX -- ${q(path)}`, 'alto');
+      }
       case 'move': {
         const from = checkWritable(await this.realpath(a.from, { mustExist: false }), this.policy);
         const to = checkWritable(await this.realpath(a.to, { mustExist: false }), this.policy);
         return mk(op, `Mover/renomear ${from} para ${to} (não sobrescreve nada)`,
-          `{ [ -e ${q(to)} ] || [ -L ${q(to)} ]; } && { echo 'Destino já existe' >&2; exit 17; }; mv -- ${q(from)} ${q(to)}`, 'medio');
+          `${notExists(to)}mv -- ${q(from)} ${q(to)}`, 'medio');
       }
       case 'chmod': {
         const rec = !!a.recursive;
@@ -174,6 +233,11 @@ export class Ops {
 
 function mk(op, summary, command, risk) {
   return { op, summary, command, risk };
+}
+
+// Prefixo de comando: aborta se o caminho já existe (inclusive atalho quebrado).
+function notExists(p) {
+  return `{ [ -e ${q(p)} ] || [ -L ${q(p)} ]; } && { echo 'Destino já existe' >&2; exit 17; }; `;
 }
 
 function firstLine(s) {
