@@ -13,7 +13,7 @@ import { q, cleanPath, checkWritable, symbolicToOctal } from '../src/core/valida
 const E = process.env;
 const conn = { host: E.BIFROST_TEST_HOST, port: E.BIFROST_TEST_PORT || 22, username: E.BIFROST_TEST_USER, password: E.BIFROST_TEST_PASS };
 const skip = !conn.host && 'defina BIFROST_TEST_HOST para rodar os testes com servidor';
-const policy = { allowedRoots: ['/srv'], noRecursive: [] };
+const policy = { allowedRoots: ['/srv'], noRecursive: [], protectedNames: ['.ssh'], blockedGroups: ['sudo', 'wheel'] };
 const BASE = '/srv/bifrost-teste';
 
 test('aspas e validação', () => {
@@ -69,6 +69,13 @@ test('sudo: elevação, pastas, permissões, usuários', { skip }, async () => {
     await assert.rejects(ops.plan('chmod', { path: `${BASE}/atalho-etc`, mode: '777' }), /fora das pastas/);
     await assert.rejects(ops.plan('mkdir', { path: '/etc/bifrost' }), /fora das pastas/);
     await assert.rejects(ops.plan('useradd', { name: 'x; rm -rf /' }), /inválido/);
+    await assert.rejects(ops.plan('addtogroup', { user: u, group: 'sudo' }), /administrador/);
+    await assert.rejects(ops.plan('useradd', { name: 'outro', groups: ['wheel'] }), /administrador/);
+    await assert.rejects(ops.plan('chmod', { path: `${BASE}/projetos`, mode: '4755' }), /setuid/);
+    await assert.rejects(ops.plan('mkdir', { path: `${BASE}/.ssh` }), /protegido/);
+    // Link quebrado no destino também conta como "já existe".
+    await s.run(`ln -sfn /nao/existe ${BASE}/link-quebrado`, { elevated: true });
+    await assert.rejects(ops.execute('move', { from: `${BASE}/renomeada`, to: `${BASE}/link-quebrado` }), /existe/);
 
     const log = await readFile(join(dir, 'audit.log'), 'utf8');
     assert.ok(log.includes('"tecnico":"teste"'));

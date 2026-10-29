@@ -12,6 +12,8 @@ Atualizado em 2026-10-29. Em **negrito** o padrão adotado no protótipo.
 6. **Política central**: hoje `politica.json` em cada PC. Distribuir uma política única?
 7. **Assinatura do .exe**: sem assinatura o Windows avisa na primeira vez. Vale um certificado?
 
+8. **Grupos de administrador** (`sudo`, `wheel`, `docker`...): **bloqueados**. Algum técnico deve poder dar sudo a alguém?
+
 ## Técnicas
 
 - Rodar os testes em Debian 12, Rocky 9 e Alpine (Dockerfiles em `test/distros/`).

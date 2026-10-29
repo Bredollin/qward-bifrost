@@ -11,6 +11,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Versões: 
 - Criar pasta, renomear/mover, permissões (grade + octal + setgid + recursivo), dono e grupo.
 - Usuários e grupos: listar, criar usuário, criar grupo, colocar em grupo, definir senha.
 - Travas: confirmação com o comando exato, pastas permitidas, links resolvidos, bloqueio de recursivo em pasta de primeiro nível.
+- Revisor: grupos de administrador bloqueados, setuid bloqueado, `.ssh` protegido, link quebrado no destino conta como existente, impressão digital gravada só após conectar, chave só pelo diálogo.
 - Registro de ações local (`registro-de-acoes.jsonl`), sem senhas.
 - Executável portátil para Windows (`npm run dist`).
 - Testes de integração (sudo e su) e teste de ponta a ponta da interface.

@@ -1,7 +1,7 @@
 // Operações de arquivo, permissão, usuário e grupo. Cada operação tem duas fases:
 // plan() mostra exatamente o que será feito (para a tela de confirmação) e execute() faz.
 // Os comandos usados existem em Debian/Ubuntu, RHEL/Rocky/Alma, SUSE e Alpine (BusyBox).
-import { q, cleanPath, cleanName, cleanMode, cleanShell, checkWritable, DEFAULT_POLICY } from './validate.mjs';
+import { q, cleanPath, cleanName, cleanMode, cleanShell, checkWritable, checkGroup, DEFAULT_POLICY } from './validate.mjs';
 
 const SEP = '\t';
 const STAT_FMT = ['%f', '%A', '%U', '%G', '%s', '%Y', '%n'].join(SEP);
@@ -94,7 +94,7 @@ export class Ops {
         const from = checkWritable(await this.realpath(a.from, { mustExist: false }), this.policy);
         const to = checkWritable(await this.realpath(a.to, { mustExist: false }), this.policy);
         return mk(op, `Mover/renomear ${from} para ${to} (não sobrescreve nada)`,
-          `[ -e ${q(to)} ] && { echo 'Destino já existe' >&2; exit 17; }; mv -- ${q(from)} ${q(to)}`, 'medio');
+          `{ [ -e ${q(to)} ] || [ -L ${q(to)} ]; } && { echo 'Destino já existe' >&2; exit 17; }; mv -- ${q(from)} ${q(to)}`, 'medio');
       }
       case 'chmod': {
         const rec = !!a.recursive;
@@ -107,7 +107,7 @@ export class Ops {
         const rec = !!a.recursive;
         const path = checkWritable(await this.realpath(a.path), this.policy, { recursive: rec });
         const owner = a.owner ? cleanName(a.owner, 'Dono') : '';
-        const group = a.group ? cleanName(a.group, 'Grupo') : '';
+        const group = a.group ? checkGroup(cleanName(a.group, 'Grupo'), this.policy) : '';
         if (!owner && !group) throw new Error('Informe o dono, o grupo ou os dois.');
         const R = rec ? '-R ' : '';
         const cmd = owner ? `chown ${R}${q(owner + (group ? ':' + group : ''))} -- ${q(path)}` : `chgrp ${R}${q(group)} -- ${q(path)}`;
@@ -122,7 +122,7 @@ export class Ops {
       case 'useradd': {
         const name = cleanName(a.name, 'Usuário');
         const shell = cleanShell(a.shell || '/bin/bash');
-        const groups = (a.groups || []).map((g) => cleanName(g, 'Grupo'));
+        const groups = (a.groups || []).map((g) => checkGroup(cleanName(g, 'Grupo'), this.policy));
         const home = a.createHome !== false;
         const ua = `useradd ${home ? '-m ' : '-M '}-s ${q(shell)}${groups.length ? ` -G ${q(groups.join(','))}` : ''} ${q(name)}`;
         const ad = `adduser -D ${home ? '' : '-H '}-s ${q(shell)} ${q(name)}` + groups.map((g) => ` && addgroup ${q(name)} ${q(g)}`).join('');
@@ -131,7 +131,7 @@ export class Ops {
       }
       case 'addtogroup': {
         const user = cleanName(a.user, 'Usuário');
-        const group = cleanName(a.group, 'Grupo');
+        const group = checkGroup(cleanName(a.group, 'Grupo'), this.policy);
         return mk(op, `Colocar o usuário ${user} no grupo ${group}`,
           `if command -v usermod >/dev/null 2>&1; then usermod -aG ${q(group)} ${q(user)}; else addgroup ${q(user)} ${q(group)}; fi`, 'medio');
       }

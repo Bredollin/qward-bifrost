@@ -23,6 +23,8 @@ export function cleanName(n, what = 'nome') {
 
 export function cleanMode(m) {
   if (typeof m !== 'string' || !/^[0-7]{3,4}$/.test(m)) throw new Error('Permissão inválida: use 3 ou 4 dígitos octais (ex.: 755).');
+  // setuid (4xxx) faz um programa rodar como o dono (ex.: root): bloqueado. setgid e sticky continuam liberados.
+  if (m.length === 4 && Number(m[0]) & 4) throw new Error('Bloqueado: setuid (4xxx) não é permitido pelo Bifrost.');
   return m;
 }
 
@@ -37,7 +39,16 @@ export const DEFAULT_POLICY = {
   allowedRoots: ['/srv', '/home', '/var/www', '/opt', '/mnt', '/media', '/dados', '/data'],
   // Recursivo (-R) bloqueado nestes caminhos, mesmo que estejam dentro de uma raiz permitida.
   noRecursive: ['/home'],
+  // Nenhum caminho com estes nomes pode ser alterado (ex.: chaves SSH dos usuários).
+  protectedNames: ['.ssh'],
+  // Grupos que dão poder de administrador: o Bifrost não coloca ninguém neles.
+  blockedGroups: ['root', 'sudo', 'wheel', 'admin', 'adm', 'docker', 'lxd', 'disk', 'shadow'],
 };
+
+export function checkGroup(g, policy) {
+  if ((policy.blockedGroups || []).includes(g)) throw new Error(`Bloqueado: o grupo ${g} dá poder de administrador; peça ao responsável.`);
+  return g;
+}
 
 export function isInside(p, root) {
   return p !== root && p.startsWith(root === '/' ? '/' : root + '/');
@@ -48,6 +59,8 @@ export function checkWritable(realPath, policy, { recursive = false } = {}) {
   if (!roots.some((r) => isInside(realPath, r))) {
     throw new Error(`Bloqueado: ${realPath} está fora das pastas permitidas (${roots.join(', ')}).`);
   }
+  const prot = realPath.split('/').find((seg) => (policy.protectedNames || []).includes(seg));
+  if (prot) throw new Error(`Bloqueado: ${realPath} é protegido (${prot}).`);
   if (recursive) {
     const depth = realPath.split('/').filter(Boolean).length;
     if (depth < 2) throw new Error('Bloqueado: recursivo em pasta de primeiro nível.');

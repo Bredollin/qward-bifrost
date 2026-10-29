@@ -16,6 +16,7 @@ const data = () => app.getPath('userData');
 
 let session = null;
 let ops = null;
+const pickedKeys = new Set(); // só lemos chaves escolhidas pelo diálogo do Windows
 const audit = () => new Audit(join(data(), 'registro-de-acoes.jsonl'));
 const known = () => new KnownHosts(join(data(), 'servidores-conhecidos.json'));
 
@@ -55,8 +56,9 @@ handle('connect', async (a) => {
   if (!a.host?.trim() || !a.username?.trim()) throw new Error('Informe servidor e usuário.');
   const port = Number(a.port) || 22;
   const kh = known();
-  if (a.trustFingerprint) await kh.set(a.host, port, a.trustFingerprint);
-  const knownFingerprint = await kh.get(a.host, port);
+  // A impressão digital confirmada só é gravada depois que a conexão der certo.
+  const knownFingerprint = (await kh.get(a.host, port)) || a.trustFingerprint || null;
+  if (a.keyPath && !pickedKeys.has(a.keyPath)) throw new Error('Escolha a chave pelo botão "Escolher…".');
   const privateKey = a.keyPath ? await readFile(a.keyPath) : undefined;
 
   session?.close();
@@ -77,6 +79,8 @@ handle('connect', async (a) => {
     }
     throw e;
   }
+
+  if (a.trustFingerprint && !(await kh.get(a.host, port))) await kh.set(a.host, port, a.trustFingerprint);
 
   const el = a.elevation || {};
   s.setElevation(el.method || 'none', el.samePassword ? a.password : el.password);
@@ -109,7 +113,9 @@ handle('execute', (a) => need().execute(a.op, a.args));
 handle('audit', () => audit().tail(300));
 handle('pickKey', async () => {
   const r = await dialog.showOpenDialog({ title: 'Escolha a chave privada SSH', properties: ['openFile', 'showHiddenFiles'] });
-  return r.canceled ? null : r.filePaths[0];
+  if (r.canceled) return null;
+  pickedKeys.add(r.filePaths[0]);
+  return r.filePaths[0];
 });
 
 function createWindow() {

@@ -22,14 +22,21 @@ O Bifrost cria usuários e muda permissões com poder de root. Estas são as tra
 ```json
 {
   "allowedRoots": ["/srv", "/home", "/var/www", "/opt", "/mnt", "/media", "/dados", "/data"],
-  "noRecursive": ["/home"]
+  "noRecursive": ["/home"],
+  "protectedNames": [".ssh"],
+  "blockedGroups": ["root", "sudo", "wheel", "admin", "adm", "docker", "lxd", "disk", "shadow"]
 }
 ```
 
 - Alteração só **dentro** de uma pasta permitida, nunca na própria raiz (ex.: pode `/srv/financeiro`, não pode `/srv`).
 - O caminho é resolvido **no servidor** com `readlink -f` antes da checagem: um atalho `/srv/x → /etc` é bloqueado.
 - Recursivo bloqueado em pasta de primeiro nível e nas listadas em `noRecursive`.
+- Nenhum caminho com um nome de `protectedNames` (padrão: `.ssh`) pode ser alterado, para proteger as chaves SSH dos usuários.
+- Ninguém é colocado (criar usuário, pôr em grupo, trocar grupo) num grupo de `blockedGroups`: são grupos que dão poder de administrador.
+- **setuid** (permissão `4xxx`) é bloqueado; setgid (`2xxx`) e sticky (`1xxx`) são liberados.
 - Ler/navegar é livre (inclusive `/etc`), alterar não.
+- Chave SSH só é lida se o técnico a escolheu pelo diálogo do Windows.
+- A impressão digital confirmada só é gravada depois que a conexão funciona.
 - Quem ajusta a política é o responsável (Michael), editando o arquivo no PC do técnico. Ver [pendências](pendencias.md) para centralizar.
 
 ## 4. Confirmação
@@ -48,6 +55,9 @@ Toda alteração passa por uma tela com resumo em português, nível de risco e 
 - Nomes de arquivo maliciosos (ex.: `<img onerror=...>`) aparecem como texto: há teste para isso.
 
 ## Limites conhecidos
+
+- Dentro de `/home`, o Bifrost pode mudar dono e permissão das pastas de outros usuários (menos `.ssh`). É de propósito (pastas pessoais), mas exige atenção.
+- Nome de arquivo com quebra de linha não aparece na listagem (caso raro).
 
 - O registro fica no PC de cada técnico (não é central nem à prova de edição).
 - O executável não é assinado (o Windows avisa na primeira vez).
