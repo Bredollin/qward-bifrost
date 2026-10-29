@@ -75,12 +75,13 @@ export class Session {
   }
 
   // Executa um comando cru. Retorna { code, stdout, stderr }.
-  exec(cmd, { stdin, pty = false, onOut } = {}) {
+  exec(cmd, { stdin, pty = false, onOut, onStream } = {}) {
     if (!this.client) return Promise.reject(new Error('Não conectado.'));
     return new Promise((resolve, reject) => {
       this.client.exec(cmd, pty ? { pty: { term: 'dumb', cols: 200, rows: 50 } } : {}, (err, stream) => {
         if (err) return reject(err);
         let stdout = '', stderr = '', code = null;
+        onStream?.(stream);
         stream.on('data', (d) => {
           stdout += d.toString('utf8');
           onOut?.(stdout, stream);
@@ -113,8 +114,11 @@ export class Session {
     // su precisa de terminal (pty): esperamos o prompt de senha, respondemos e separamos a saída pelo marcador.
     let sentPw = false, sentIn = false;
     const wrapped = `stty -echo 2>/dev/null; printf '%s\\n' ${MARK}; ${script}`;
+    // Sem prompt reconhecido o su ficaria esperando a senha para sempre: corta se não pediu senha em 20 s.
+    let timer;
     const r = await this.exec(`su -c ${q(wrapped)} root`, {
       pty: true,
+      onStream: (stream) => (timer = setTimeout(() => !sentPw && stream.close(), 20000)),
       onOut: (out, stream) => {
         if (!sentPw && SU_PROMPT.test(out)) {
           sentPw = true;
@@ -126,6 +130,7 @@ export class Session {
         }
       },
     });
+    clearTimeout(timer);
     const all = r.stdout.replace(/\r\n/g, '\n');
     const i = all.indexOf(MARK + '\n');
     if (i < 0) {

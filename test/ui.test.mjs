@@ -48,7 +48,7 @@ try {
   await ok();
   await w.waitForSelector('#dlg-erro:not([hidden])');
   await shot('03a-elevar-senha-errada');
-  await w.fill('#dlg [name=elevSenha]', E.BIFROST_TEST_ROOTPASS);
+  await w.fill('#dlg [name=elevSenha]', E.BIFROST_TEST_PASS);
   await ok();
   await w.waitForFunction(() => /^root$/.test(document.querySelector('#srv-elev').textContent));
   await shot('03b-elevado');
@@ -62,7 +62,7 @@ try {
   await w.waitForFunction(() => document.querySelector('#caminho').value === '/srv');
   await w.click('#btn-nova-pasta');
   await w.waitForSelector('#dlg [name=elevSenha]');
-  await w.fill('#dlg [name=elevSenha]', E.BIFROST_TEST_ROOTPASS);
+  await w.fill('#dlg [name=elevSenha]', E.BIFROST_TEST_PASS);
   await ok();
   await w.waitForSelector('#dlg [name=nome]');
   await w.fill('#dlg [name=nome]', 'bifrost-ui-' + tag);

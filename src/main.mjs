@@ -96,21 +96,26 @@ handle('disconnect', async () => {
   session = ops = null;
 });
 
-// Botão Elevar: troca para root com su. Se a senha falhar, continua sem elevação.
+// Botão Elevar: tenta su (senha do root); se falhar, sudo com a mesma senha (root bloqueado, ex.: Ubuntu).
+// Se nenhum funcionar, a sessão continua sem elevação.
 handle('elevate', async (a) => {
   const o = need();
-  if (a.method !== 'su') throw new Error('Método de elevação inválido.');
   if (!a.password) throw new Error('Informe a senha.');
-  session.setElevation(a.method, a.password);
-  try {
-    await session.testElevation();
-  } catch (e) {
-    session.setElevation('none');
-    await audit().write({ tecnico: o.tecnico, host: o.host, op: 'elevar', summary: `Tentou elevar com ${a.method}`, ok: false, error: e.message });
-    throw e;
+  const erros = [];
+  for (const method of ['su', 'sudo']) {
+    session.setElevation(method, a.password);
+    try {
+      await session.testElevation();
+      await audit().write({ tecnico: o.tecnico, host: o.host, op: 'elevar', summary: `Elevou com ${method}`, ok: true });
+      return { elevation: method };
+    } catch (e) {
+      erros.push(`${method}: ${e.message}`);
+    }
   }
-  await audit().write({ tecnico: o.tecnico, host: o.host, op: 'elevar', summary: `Elevou com ${a.method}`, ok: true });
-  return { elevation: a.method };
+  session.setElevation('none');
+  const msg = 'Senha recusada pelo su (root) e pelo sudo (usuário). ' + erros.join(' | ');
+  await audit().write({ tecnico: o.tecnico, host: o.host, op: 'elevar', summary: 'Tentou elevar (su e sudo)', ok: false, error: msg });
+  throw new Error(msg);
 });
 
 handle('dropElevation', async () => {
