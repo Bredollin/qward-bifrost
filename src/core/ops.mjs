@@ -112,7 +112,8 @@ export class Ops {
         const R = rec ? '-R ' : '';
         const cmd = owner ? `chown ${R}${q(owner + (group ? ':' + group : ''))} -- ${q(path)}` : `chgrp ${R}${q(group)} -- ${q(path)}`;
         const what = [owner && `dono ${owner}`, group && `grupo ${group}`].filter(Boolean).join(' e ');
-        return mk(op, `Mudar ${what} de ${path}${rec ? ' (em TUDO dentro dela)' : ''}`, cmd, rec ? 'alto' : 'medio');
+        const root = owner === 'root' || owner === '0';
+        return mk(op, `Mudar ${what} de ${path}${rec ? ' (em TUDO dentro dela)' : ''}${root ? ' (dono root: só o root escreve)' : ''}`, cmd, rec || root ? 'alto' : 'medio');
       }
       case 'groupadd': {
         const name = cleanName(a.name, 'Grupo');

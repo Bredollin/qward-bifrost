@@ -24,6 +24,14 @@ docker run -d -p 127.0.0.1:2222:22 -e TEST_PASS='...' -e TEST_ROOTPASS='...' bif
 
 Troque `debian` por `rocky` ou `alpine` para as outras distros.
 
+### Servidor sem sudo
+
+`BIFROST_TEST_ELEV=su` roda a suíte principal com `su` (precisa de `BIFROST_TEST_ROOTPASS`) e pula os testes de sudo. Vale também para o `test:ui`.
+
+### Antes de entregar mudança na elevação
+
+Rode `node tools/diag-elevacao.mjs` e os testes num **Debian real** (não só no Ubuntu da nuvem): o prompt do su muda por distro e idioma.
+
 ## Interface (`npm run test:ui`)
 
 Abre o app de verdade (Electron + Playwright), conecta no servidor de teste e faz o caminho do técnico, salvando capturas:

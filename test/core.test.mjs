@@ -13,6 +13,10 @@ import { q, cleanPath, checkWritable, symbolicToOctal } from '../src/core/valida
 const E = process.env;
 const conn = { host: E.BIFROST_TEST_HOST, port: E.BIFROST_TEST_PORT || 22, username: E.BIFROST_TEST_USER, password: E.BIFROST_TEST_PASS };
 const skip = !conn.host && 'defina BIFROST_TEST_HOST para rodar os testes com servidor';
+// Servidor sem sudo (ex.: Debian mínimo): BIFROST_TEST_ELEV=su roda a suíte principal com su e pula os testes de sudo.
+const ELEV = E.BIFROST_TEST_ELEV === 'su' ? 'su' : 'sudo';
+const elevPw = ELEV === 'su' ? E.BIFROST_TEST_ROOTPASS : conn.password;
+const skipSudo = skip || (ELEV === 'su' && 'servidor sem sudo (BIFROST_TEST_ELEV=su)');
 const policy = { allowedRoots: ['/srv'], noRecursive: [], protectedNames: ['.ssh'], blockedGroups: ['sudo', 'wheel'] };
 const BASE = '/srv/bifrost-teste';
 
@@ -32,8 +36,8 @@ async function open(method, pw) {
   return s;
 }
 
-test('sudo: elevação, pastas, permissões, usuários', { skip }, async () => {
-  const s = await open('sudo', conn.password);
+test(`${ELEV}: elevação, pastas, permissões, usuários`, { skip }, async () => {
+  const s = await open(ELEV, elevPw);
   const dir = await mkdtemp(join(tmpdir(), 'bifrost-'));
   const audit = new Audit(join(dir, 'audit.log'));
   const ops = new Ops(s, { policy, audit, tecnico: 'teste', host: 'srv-teste' });
@@ -91,7 +95,7 @@ test('sudo: elevação, pastas, permissões, usuários', { skip }, async () => {
   }
 });
 
-test('sudo com senha errada é recusado', { skip }, async () => {
+test('sudo com senha errada é recusado', { skip: skipSudo }, async () => {
   const s = await open('sudo', 'errada');
   try {
     await assert.rejects(s.testElevation(), /recusada/);
@@ -100,7 +104,7 @@ test('sudo com senha errada é recusado', { skip }, async () => {
   }
 });
 
-test('entrar como usuário comum e elevar depois (botão Elevar)', { skip }, async () => {
+test('entrar como usuário comum e elevar depois (botão Elevar)', { skip: skipSudo }, async () => {
   const s = await open('none');
   const ops = new Ops(s, { policy });
   try {

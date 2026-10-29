@@ -143,9 +143,19 @@ async function elevate(motivo) {
     ],
     okText: 'Elevar',
     onOk: async (f) => {
-      const password = f.elevSenha.value;
-      f.elevSenha.value = '';
-      return (await api('elevate', { password })).elevation;
+      // A senha só sai do campo depois da resposta: se falhar, o técnico corrige sem redigitar tudo.
+      const btn = $('#dlg-ok');
+      btn.textContent = 'Elevando…';
+      try {
+        const r = await api('elevate', { password: f.elevSenha.value });
+        f.elevSenha.value = '';
+        return r.elevation;
+      } catch (e) {
+        f.elevSenha.select();
+        throw e;
+      } finally {
+        btn.textContent = 'Elevar';
+      }
     },
   });
   if (!ok) return false;
