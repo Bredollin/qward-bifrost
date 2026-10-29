@@ -15,11 +15,13 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Versões: 
 - Cores da Qward (verde-escuro, verde vivo e laranja do site qward.com.br), logo em losango e novo lema no topo. Selo de estado mostra o usuário logado ou "root".
 - Elevar: tenta `su` (senha do root) e, se falhar, `sudo` com a mesma senha (servidor com root bloqueado).
 - Dono `root` em "Dono e grupo" passa a ser risco alto (pede confirmação).
+- Permissão com escrita para "outros" (ex.: 777, 2777) passa a ser risco alto, com aviso no resumo.
 - Testes: `BIFROST_TEST_ELEV=su` roda a suíte num servidor sem sudo.
 
 ### Corrigido
 - Com `su`, `useradd`, `groupadd`, `usermod` e `chpasswd` davam "comando não encontrado" (Debian 10+: `su -c` não põe sbin no PATH). O script elevado agora começa com `PATH=/usr/local/sbin:/usr/sbin:/sbin:$PATH`; `sysinfo` detecta `useradd` do mesmo jeito.
 - Enter em qualquer janela acionava o Cancelar (primeiro botão submit do form) e fechava sem aviso, o "loop" do Elevar. Cancelar agora é `type="button"`; Enter confirma.
+- "Dono e grupo": o grupo só é enviado se mudou; antes o grupo atual bloqueado (ex.: root) impedia trocar só o dono.
 - Escolha de usuário e grupo virou lista (`select`) que rola com o mouse; grupos filtrados para GID 1000+ e fora dos bloqueados da política.
 - `su` ficava esperando a senha para sempre quando o prompt não era reconhecido (visto no Debian 11): toda alteração travava na janela de elevar. Agora a senha vai após 1,5 s mesmo sem reconhecer o prompt, e sem resposta em 20 s vira erro.
 - A senha sumia do campo antes da resposta do su, parecendo que o app pedia de novo. Agora fica até dar certo, e o botão mostra "Elevando…".

@@ -65,6 +65,9 @@ test(`${ELEV}: elevação, pastas, permissões, usuários`, { skip }, async () =
 
     await ops.execute('chown', { path: `${BASE}/projetos`, owner: u, group: g, recursive: true });
     await ops.execute('chmod', { path: `${BASE}/projetos`, mode: '2770' });
+    assert.equal((await ops.plan('chmod', { path: `${BASE}/projetos`, mode: '2777' })).risk, 'alto');
+    assert.equal((await ops.plan('chmod', { path: `${BASE}/projetos`, mode: '750' })).risk, 'medio');
+    assert.equal((await ops.plan('chown', { path: `${BASE}/projetos`, owner: 'root' })).risk, 'alto');
     l = await ops.list(BASE);
     const p = l.entries.find((e) => e.name === 'projetos');
     assert.equal(p.owner, u); assert.equal(p.group, g); assert.equal(p.perms, 'drwxrws---');

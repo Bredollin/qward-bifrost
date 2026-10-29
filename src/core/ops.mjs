@@ -100,8 +100,10 @@ export class Ops {
         const rec = !!a.recursive;
         const path = checkWritable(await this.realpath(a.path), this.policy, { recursive: rec });
         const mode = cleanMode(a.mode);
-        return mk(op, `Mudar a permissão de ${path} para ${mode}${rec ? ' (em TUDO dentro dela)' : ''}`,
-          `chmod ${rec ? '-R ' : ''}${mode} -- ${q(path)}`, rec ? 'alto' : 'medio');
+        // "Outros" com escrita (ex.: 777, 2777): qualquer usuário do servidor altera ou apaga.
+        const world = (Number(mode.slice(-1)) & 2) === 2;
+        return mk(op, `Mudar a permissão de ${path} para ${mode}${rec ? ' (em TUDO dentro dela)' : ''}${world ? ' (ATENÇÃO: qualquer usuário do servidor poderá escrever)' : ''}`,
+          `chmod ${rec ? '-R ' : ''}${mode} -- ${q(path)}`, rec || world ? 'alto' : 'medio');
       }
       case 'chown': {
         const rec = !!a.recursive;

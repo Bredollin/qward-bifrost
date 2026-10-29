@@ -313,7 +313,8 @@ $('#btn-dono').addEventListener('click', async () => {
     args: (f) => ({
       path: join(state.cwd, s.name),
       owner: f.owner.value.trim() !== s.owner ? f.owner.value.trim() : undefined,
-      group: f.group.value.trim() || undefined,
+      // Grupo só vai se mudou: o grupo atual pode ser bloqueado (ex.: root) e não deve impedir trocar só o dono.
+      group: f.group.value.trim() && f.group.value.trim() !== s.group ? f.group.value.trim() : undefined,
       recursive: f.recursive.checked,
     }),
   });
