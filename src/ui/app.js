@@ -45,7 +45,7 @@ function syncLogin() {
   $('[data-elev="sudo"]').hidden = !(elev === 'sudo' && auth === 'senha');
   const needPw = elev === 'su' || (elev === 'sudo' && (auth === 'chave' || !form.samePassword.checked));
   $('[data-elev="pw"]').hidden = !needPw;
-  $('#elev-label').textContent = elev === 'su' ? 'Senha do root' : 'Senha do sudo';
+  $('#elev-label').textContent = 'root';
 }
 form.addEventListener('change', syncLogin);
 syncLogin();
@@ -125,7 +125,7 @@ function showElevation(method) {
   state.info.elevation = method;
   const on = method !== 'none';
   const e = $('#srv-elev');
-  e.textContent = on ? `root via ${method}` : 'usuário comum (só leitura)';
+  e.textContent = on ? `root (${method})` : 'user';
   e.classList.toggle('root', on);
   const b = $('#btn-elevar');
   b.textContent = on ? 'Sair do root' : 'Elevar permissão';
@@ -139,18 +139,15 @@ function showElevation(method) {
 
 // Pede sudo ou su com a sessão já aberta. Retorna true se ficou root.
 async function elevate(motivo) {
-  const sync = (f) => {
-    $('#elev-dlg-label').textContent = f.metodo.value === 'su' ? 'Senha do root' : 'Senha do sudo (normalmente a mesma do login)';
-  };
   const ok = await dialog({
     title: 'Elevar permissão',
     body: [
       motivo ? el('p', { class: 'muted', text: motivo }) : null,
-      el('fieldset', { class: 'seg', onchange: (ev) => sync(ev.currentTarget.form) },
+      el('fieldset', { class: 'seg' },
         el('legend', { text: 'Como elevar' }),
         el('label', {}, el('input', { type: 'radio', name: 'metodo', value: 'sudo', checked: true }), ' sudo'),
-        el('label', {}, el('input', { type: 'radio', name: 'metodo', value: 'su' }), ' su (senha do root)')),
-      el('label', {}, el('span', { id: 'elev-dlg-label', text: 'Senha do sudo (normalmente a mesma do login)' }),
+        el('label', {}, el('input', { type: 'radio', name: 'metodo', value: 'su' }), ' su')),
+      el('label', {}, 'root',
         el('input', { name: 'elevSenha', type: 'password', required: true })),
       el('p', { class: 'muted small', text: 'A senha fica só na memória até você desconectar ou sair do root.' }),
     ],
@@ -171,7 +168,7 @@ $('#btn-elevar').addEventListener('click', async () => {
   if (state.info.elevation === 'none') return elevate();
   await api('dropElevation').catch(() => {});
   showElevation('none');
-  status('Saiu do root: de volta ao usuário comum.');
+  status('Saiu do root.');
 });
 
 $('#btn-sair').addEventListener('click', async () => {

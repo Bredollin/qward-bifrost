@@ -15,9 +15,9 @@ Dê dois cliques em `QwardBifrost-<versão>-portable.exe`. Não precisa instalar
 | Porta | normalmente 22 |
 | Usuário SSH | o usuário de manutenção da Qward |
 | Senha ou Chave SSH | o que o servidor usa |
-| Elevar permissões | **Depois, pelo botão Elevar** (padrão): entra como usuário comum. Se preferir, **Já com sudo** ou **Já com su** elevam no login |
+| Elevação | **Depois (botão Elevar)** (padrão): entra como usuário comum. **sudo** ou **su** elevam já no login |
 
-Depois de conectar, o botão laranja **Elevar permissão** (no topo, à direita) pede sudo (senha do usuário) ou su (senha do root). O selo muda para "root via sudo/su" e o botão vira **Sair do root**. Se você tentar uma alteração sem elevar, o Bifrost abre essa janela sozinho. Depois de elevar, você continua como root até clicar em **Sair do root** ou desconectar.
+Depois de conectar, o botão laranja **Elevar permissão** (no topo, à direita) pede sudo (senha do usuário) ou su (senha do root). O selo muda de "user" para "root (sudo)" ou "root (su)" e o botão vira **Sair do root**. Se você tentar uma alteração sem elevar, o Bifrost abre essa janela sozinho. Depois de elevar, você continua como root até clicar em **Sair do root** ou desconectar.
 
 Clique em **Conectar**.
 
