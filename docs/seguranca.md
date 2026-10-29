@@ -58,6 +58,7 @@ Toda alteração passa por uma tela com resumo em português, nível de risco e 
 
 ## Limites conhecidos
 
+- **Acesso total** (`chown -R`/`chmod -R`) também altera um *hardlink* que esteja dentro da pasta e aponte para um arquivo de fora (mesmo disco). Só acontece se alguém criou o link; o Bifrost não procura por eles.
 - Dentro de `/home`, o Bifrost pode mudar dono e permissão das pastas de outros usuários (menos `.ssh`). É de propósito (pastas pessoais), mas exige atenção.
 - Nome de arquivo com quebra de linha não aparece na listagem (caso raro).
 

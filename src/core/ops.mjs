@@ -93,7 +93,9 @@ export class Ops {
   async guardTree(path) {
     const r = await this.s.run(
       `find ${q(path)} -name .ssh -print 2>/dev/null | head -n 1; ` +
-        `awk -v p=${q(path)} '$2 == p || index($2, p "/") == 1 { print "montagem:" $2; exit }' /proc/mounts 2>/dev/null`,
+        // ENVIRON não interpreta barra invertida; o /proc/mounts escreve espaço como \040 (tab, quebra e barra também em octal).
+        `P=${q(path)} awk '{ m = $2; gsub(/\\\\040/, " ", m); gsub(/\\\\011/, "\\t", m); gsub(/\\\\012/, "\\n", m); gsub(/\\\\134/, "\\\\", m); ` +
+          `p = ENVIRON["P"]; if (m == p || index(m, p "/") == 1) { print "montagem:" m; exit } }' /proc/mounts 2>/dev/null`,
       { elevated: this.canElevate }
     );
     const hit = r.stdout.trim().split('\n').filter(Boolean)[0];
