@@ -100,6 +100,24 @@ test('sudo com senha errada é recusado', { skip }, async () => {
   }
 });
 
+test('entrar como usuário comum e elevar depois (botão Elevar)', { skip }, async () => {
+  const s = await open('none');
+  const ops = new Ops(s, { policy });
+  try {
+    assert.equal(ops.canElevate, false);
+    assert.notEqual((await s.run('id -u', { elevated: true })).stdout.trim(), '0');
+    s.setElevation('sudo', 'errada');
+    await assert.rejects(s.testElevation(), /recusada/);
+    s.setElevation('sudo', conn.password);
+    await s.testElevation();
+    assert.equal(ops.canElevate, true);
+    s.setElevation('none');
+    assert.equal(ops.canElevate, false);
+  } finally {
+    s.close();
+  }
+});
+
 test('su: elevação com senha de root', { skip: skip || (!E.BIFROST_TEST_ROOTPASS && 'sem BIFROST_TEST_ROOTPASS') }, async () => {
   const s = await open('su', E.BIFROST_TEST_ROOTPASS);
   const ops = new Ops(s, { policy });

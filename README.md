@@ -1,6 +1,6 @@
 # Qward Bifrost
 
-> A ponte até os servidores Linux, sem terminal.
+> No dia mais claro, na noite mais densa, nenhum servidor escapa à nossa luz.
 
 Programa para Windows que deixa os técnicos gerenciarem pastas, permissões, donos, grupos e usuários de servidores Linux **por SSH**, com interface gráfica. **Nada é instalado no servidor**: o Bifrost usa só o SSH e comandos que já existem em qualquer Linux.
 

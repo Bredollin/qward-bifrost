@@ -6,6 +6,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Versões: 
 
 ### Adicionado
 - GitHub Actions gera o .exe no Windows a cada push e publica Release nas tags `v*`.
+- Botão **Elevar permissão** no topo: entra como usuário comum e eleva com sudo ou su só quando precisar; "Sair do root" volta ao usuário comum. Elevar e sair vão para o registro.
+- Alteração sem elevação abre a janela de elevar antes de continuar.
+
+### Alterado
+- Login: o padrão agora é "Depois, pelo botão Elevar"; elevar já no login (sudo ou su) continua como opção.
+- Cores da Qward (verde-escuro, verde vivo e laranja do site qward.com.br), logo em losango e novo lema no topo.
 
 ## [0.1.0] - 2026-10-29
 

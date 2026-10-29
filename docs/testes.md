@@ -36,6 +36,6 @@ Cobre: confirmar servidor, criar pasta, entrar, criar com permissão, nome malic
 
 ## Resultado em 2026-10-29
 
-- `npm test`: 4/4 ✅ (Ubuntu 24.04).
-- `test:ui`: ✅, 9 capturas conferidas.
+- `npm test`: 5/5 ✅ (Ubuntu 24.04), incluindo entrar como usuário comum e elevar depois.
+- `test:ui`: ✅, 11 capturas conferidas (botão Elevar com senha errada e certa, elevação pedida pela operação, cores da Qward).
 - Pacote: `.exe` portátil gerado; o mesmo pacote em Linux abriu e conectou.

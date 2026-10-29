@@ -82,6 +82,7 @@ handle('connect', async (a) => {
 
   if (a.trustFingerprint && !(await kh.get(a.host, port))) await kh.set(a.host, port, a.trustFingerprint);
 
+  // Elevar já no login é opcional (fallback); o padrão é entrar sem elevar e usar o botão Elevar.
   const el = a.elevation || {};
   s.setElevation(el.method || 'none', el.samePassword ? a.password : el.password);
   if (el.method && el.method !== 'none') {
@@ -105,6 +106,30 @@ handle('disconnect', async () => {
   session = ops = null;
 });
 
+// Botão Elevar: liga sudo ou su com a sessão já aberta. Se a senha falhar, continua sem elevação.
+handle('elevate', async (a) => {
+  const o = need();
+  if (!['sudo', 'su'].includes(a.method)) throw new Error('Escolha sudo ou su.');
+  if (!a.password) throw new Error('Informe a senha.');
+  session.setElevation(a.method, a.password);
+  try {
+    await session.testElevation();
+  } catch (e) {
+    session.setElevation('none');
+    await audit().write({ tecnico: o.tecnico, host: o.host, op: 'elevar', summary: `Tentou elevar com ${a.method}`, ok: false, error: e.message });
+    throw e;
+  }
+  await audit().write({ tecnico: o.tecnico, host: o.host, op: 'elevar', summary: `Elevou com ${a.method}`, ok: true });
+  return { elevation: a.method };
+});
+
+handle('dropElevation', async () => {
+  const o = need();
+  session.setElevation('none');
+  await audit().write({ tecnico: o.tecnico, host: o.host, op: 'baixar-elevacao', summary: 'Saiu do modo root', ok: true });
+  return { elevation: 'none' };
+});
+
 handle('list', (a) => need().list(a.path, { elevated: !!a.elevated }));
 handle('users', () => need().users());
 handle('groups', () => need().groups());
@@ -121,7 +146,7 @@ handle('pickKey', async () => {
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280, height: 820, minWidth: 960, minHeight: 640,
-    title: 'Qward Bifrost', backgroundColor: '#0d1117',
+    title: 'Qward Bifrost', backgroundColor: '#0a2420',
     icon: join(here, 'ui', 'icone.png'),
     webPreferences: { preload: join(here, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });

@@ -16,7 +16,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>Qward Bifrost</h1>
-          <p class="muted">A ponte até os servidores Linux, sem terminal.</p>
+          <p class="muted lema">No dia mais claro, na noite mais densa, nenhum servidor escapa à nossa luz.</p>
         </div>
       </div>
 
@@ -56,10 +56,10 @@
       </div>
 
       <fieldset class="seg">
-        <legend>Elevar permissões (para alterar arquivos e usuários)</legend>
-        <label><input type="radio" name="elev" value="sudo" checked> sudo</label>
-        <label><input type="radio" name="elev" value="su"> su (senha do root)</label>
-        <label><input type="radio" name="elev" value="none"> Não elevar</label>
+        <legend>Elevar permissões <span class="hint">para alterar arquivos e usuários</span></legend>
+        <label><input type="radio" name="elev" value="none" checked> Depois, pelo botão Elevar</label>
+        <label><input type="radio" name="elev" value="sudo"> Já com sudo</label>
+        <label><input type="radio" name="elev" value="su"> Já com su (root)</label>
       </fieldset>
       <div data-elev="sudo">
         <label class="check"><input type="checkbox" name="samePassword" checked> A senha do sudo é a mesma do login</label>
@@ -89,6 +89,7 @@
       <div class="server">
         <span id="srv-info" class="chip"></span>
         <span id="srv-elev" class="chip"></span>
+        <button class="btn elevar" id="btn-elevar" type="button">Elevar permissão</button>
         <button class="btn ghost" id="btn-sair">Desconectar</button>
       </div>
     </header>
