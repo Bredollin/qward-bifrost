@@ -3,7 +3,7 @@
 Data: 2026-10-29 · Situação: aceita
 
 ## Contexto
-A Qward usa um único usuário de manutenção nos servidores. O Michael definiu: conectar com usuário comum e depois elevar. Nem todo servidor tem sudo configurado.
+Usa um único usuário de manutenção nos servidores. O Michael definiu: conectar com usuário comum e depois elevar. Nem todo servidor tem sudo configurado.
 
 ## Decisão
 Duas formas, escolhidas na tela de conexão: `sudo -S` (senha do usuário, ou outra) e `su` (senha do root, via pseudo-terminal). Leitura roda sem elevação (com "Ver como root" opcional); alteração roda elevada. A elevação é testada ao conectar.
