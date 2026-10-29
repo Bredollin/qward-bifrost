@@ -305,10 +305,8 @@ $('#btn-dono').addEventListener('click', async () => {
     title: 'Dono e grupo',
     fields: [
       el('p', { class: 'muted', text: `${join(state.cwd, s.name)} · hoje: ${s.owner}:${s.group}` }),
-      field('Dono', 'owner', { value: s.owner, list: 'dl-usuarios', class: 'mono' }),
-      field('Grupo', 'group', { value: s.group, list: 'dl-grupos', class: 'mono' }),
-      datalist('dl-usuarios', state.users.map((u) => u.name)),
-      datalist('dl-grupos', state.groups.map((g) => g.name)),
+      pick('Dono', 'owner', pessoas(), { value: s.owner }),
+      pick('Grupo', 'group', gruposLivres(), { value: s.group }),
       el('label', { class: 'check danger' }, el('input', { type: 'checkbox', name: 'recursive' }), 'Aplicar em tudo que está dentro (recursivo)'),
     ],
     op: 'chown',
@@ -379,8 +377,7 @@ $('#btn-novo-usuario').addEventListener('click', async () => {
     title: 'Novo usuário',
     fields: [
       field('Nome de usuário', 'nome', { required: true, placeholder: 'ex.: joao.silva → use joao_silva', class: 'mono' }),
-      field('Grupos extras (separados por vírgula)', 'groups', { placeholder: 'ex.: financeiro,rh', list: 'dl-grupos', class: 'mono' }),
-      datalist('dl-grupos', state.groups.map((g) => g.name)),
+      pick('Grupos extras (Ctrl+clique para vários)', 'groups', gruposLivres(), { multiple: true }),
       el('label', {}, 'Shell',
         el('select', { name: 'shell' },
           el('option', { value: '/bin/bash', text: '/bin/bash (pode usar terminal)' }),
@@ -392,7 +389,7 @@ $('#btn-novo-usuario').addEventListener('click', async () => {
     op: 'useradd',
     args: (f) => {
       checkPw(f, false);
-      return { name: f.nome.value.trim(), groups: f.groups.value.split(',').map((x) => x.trim()).filter(Boolean), shell: f.shell.value, createHome: f.home.checked };
+      return { name: f.nome.value.trim(), groups: [...f.groups.selectedOptions].map((o) => o.value), shell: f.shell.value, createHome: f.home.checked };
     },
     after: async (f) => {
       const pw = f.pw1.value;
@@ -411,10 +408,8 @@ $('#btn-add-grupo').addEventListener('click', async () => {
   operation({
     title: 'Colocar usuário em grupo',
     fields: [
-      field('Usuário', 'user', { required: true, list: 'dl-usuarios', class: 'mono' }),
-      field('Grupo', 'group', { required: true, list: 'dl-grupos', class: 'mono' }),
-      datalist('dl-usuarios', state.users.filter((u) => u.human).map((u) => u.name)),
-      datalist('dl-grupos', state.groups.map((g) => g.name)),
+      pick('Usuário', 'user', pessoas(), { required: true }),
+      pick('Grupo', 'group', gruposLivres(), { required: true }),
       el('p', { class: 'muted small', text: 'O usuário precisa sair e entrar de novo para o grupo valer.' }),
     ],
     op: 'addtogroup',
@@ -427,7 +422,7 @@ $('#btn-senha').addEventListener('click', async () => {
   await ensureUsersGroups();
   operation({
     title: 'Definir senha',
-    fields: [field('Usuário', 'user', { required: true, list: 'dl-usuarios', class: 'mono' }), datalist('dl-usuarios', state.users.filter((u) => u.human).map((u) => u.name)), ...pwFields()],
+    fields: [pick('Usuário', 'user', pessoas(), { required: true }), ...pwFields()],
     op: 'passwd',
     args: (f) => ({ user: f.user.value.trim(), password: checkPw(f, true) }),
   });
@@ -456,9 +451,23 @@ async function loadAudit() {
 function field(labelText, name, attrs = {}) {
   return el('label', {}, labelText, el('input', { name, ...attrs }));
 }
-function datalist(id, values) {
-  return el('datalist', { id }, values.map((v) => el('option', { value: v })));
+// Lista de escolha (select): rola com o mouse no Electron, ao contrário do datalist. O valor atual sempre aparece.
+function pick(labelText, name, values, { value = '', required = false, multiple = false } = {}) {
+  const opts = [...new Set([value, ...values].filter(Boolean))];
+  return el('label', {}, labelText,
+    el('select', { name, required, multiple, size: multiple ? 6 : false, class: 'mono' },
+      multiple ? null : el('option', { value: '', text: '—' }),
+      opts.map((v) => el('option', { value: v, text: v, selected: v === value }))));
 }
+const pessoas = () => state.users.filter((u) => u.human).map((u) => u.name);
+// Só grupos de pessoas (GID 1000+, sem nogroup) e fora da lista de bloqueados da política.
+const gruposLivres = () => {
+  const bloq = state.info?.policy?.blockedGroups || [];
+  return state.groups.filter((g) => g.gid >= 1000 && g.gid < 60000 && !bloq.includes(g.name)).map((g) => g.name);
+};
+
+// Cancelar não é submit: o Enter num campo aciona o botão de confirmar, não fecha a janela.
+$('#dlg-cancel').addEventListener('click', () => $('#dlg').close());
 
 // Janela genérica. onOk pode lançar erro: a mensagem aparece e a janela continua aberta.
 function dialog({ title, body, okText = 'Continuar', danger = false, onOk }) {

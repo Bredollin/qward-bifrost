@@ -113,7 +113,8 @@ export class Session {
 
     // su precisa de terminal (pty): esperamos o prompt de senha, respondemos e separamos a saída pelo marcador.
     let sentPw = false, sentIn = false, gotMark = false, timedOut = false;
-    const wrapped = `stty -echo 2>/dev/null; printf '%s\\n' ${MARK}; ${script}`;
+    // `su -c` (Debian 10+) não põe sbin no PATH: sem isso useradd, groupadd, usermod e chpasswd "não existem".
+    const wrapped = `PATH=/usr/local/sbin:/usr/sbin:/sbin:$PATH; export PATH; stty -echo 2>/dev/null; printf '%s\\n' ${MARK}; ${script}`;
     // O prompt do su varia por distro e idioma: se não reconhecermos o texto em 1,5 s, a senha vai assim mesmo
     // (o su lê do terminal). Se nada responder em 20 s, a sessão é fechada e vira erro, em vez de ficar presa.
     const timers = [];

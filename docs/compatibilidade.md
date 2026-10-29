@@ -21,7 +21,7 @@ O tipo de arquivo vem de `stat %f` (número), não do texto traduzido, então fu
 | Distro | Situação |
 |---|---|
 | Ubuntu 24.04 (OpenSSH 9.6) | ✅ testes de núcleo (sudo e su) e de interface |
-| Debian 11 (servidor de teste) | ❌ na 0.1.0+main: su travava sem resposta; correção neste branch, aguardando reteste no servidor real |
+| Debian 11 (servidor de teste) | ⚠️ reteste 2026-10-29: elevar com su, nova pasta e permissões ok; usuários/grupos falhavam (PATH sem sbin no `su -c`) e Enter fechava janelas. Corrigido neste branch, aguardando novo reteste |
 | Debian 12, Rocky 9, Alpine 3.20 | ⏳ Dockerfiles prontos em `test/distros/`; não rodaram na nuvem porque a rede bloqueou baixar os pacotes. Rodar num PC com Docker ou num servidor de teste. |
 
 Shell de login do usuário de manutenção: precisa ser compatível com POSIX (`sh`, `bash`, `dash`, `ash`, `zsh`). `fish` e `csh` não foram testados.

@@ -22,7 +22,7 @@ export class Ops {
   async sysinfo() {
     const r = await this.s.run(
       `. /etc/os-release 2>/dev/null; printf '%s\\n' "\${PRETTY_NAME:-Linux}"; uname -r; id -un; id -u; ` +
-        `command -v useradd >/dev/null && echo useradd || echo adduser`
+        `(PATH=/usr/local/sbin:/usr/sbin:/sbin:$PATH; command -v useradd >/dev/null) && echo useradd || echo adduser`
     );
     const [distro, kernel, user, uid, userTool] = r.stdout.trim().split('\n');
     return { distro, kernel, user, uid: Number(uid), userTool };

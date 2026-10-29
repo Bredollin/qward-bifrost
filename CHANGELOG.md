@@ -18,6 +18,9 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Versões: 
 - Testes: `BIFROST_TEST_ELEV=su` roda a suíte num servidor sem sudo.
 
 ### Corrigido
+- Com `su`, `useradd`, `groupadd`, `usermod` e `chpasswd` davam "comando não encontrado" (Debian 10+: `su -c` não põe sbin no PATH). O script elevado agora começa com `PATH=/usr/local/sbin:/usr/sbin:/sbin:$PATH`; `sysinfo` detecta `useradd` do mesmo jeito.
+- Enter em qualquer janela acionava o Cancelar (primeiro botão submit do form) e fechava sem aviso, o "loop" do Elevar. Cancelar agora é `type="button"`; Enter confirma.
+- Escolha de usuário e grupo virou lista (`select`) que rola com o mouse; grupos filtrados para GID 1000+ e fora dos bloqueados da política.
 - `su` ficava esperando a senha para sempre quando o prompt não era reconhecido (visto no Debian 11): toda alteração travava na janela de elevar. Agora a senha vai após 1,5 s mesmo sem reconhecer o prompt, e sem resposta em 20 s vira erro.
 - A senha sumia do campo antes da resposta do su, parecendo que o app pedia de novo. Agora fica até dar certo, e o botão mostra "Elevando…".
 

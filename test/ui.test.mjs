@@ -68,7 +68,8 @@ try {
   await ok();
   await w.waitForSelector('#dlg [name=nome]');
   await w.fill('#dlg [name=nome]', 'bifrost-ui-' + tag);
-  await ok();
+  // Enter no campo confirma (antes acionava o Cancelar e fechava a janela).
+  await w.press('#dlg [name=nome]', 'Enter');
   await w.waitForSelector('.risk');
   await shot('03-confirmar-nova-pasta');
   await ok();
@@ -125,7 +126,7 @@ try {
   await w.waitForSelector(`#lista-grupos td:text-is("bfui${tag}")`);
   await w.click('#btn-novo-usuario');
   await w.fill('#dlg [name=nome]', 'bfuser' + tag);
-  await w.fill('#dlg [name=groups]', 'bfui' + tag);
+  await w.selectOption('#dlg [name=groups]', ['bfui' + tag]);
   await w.fill('#dlg [name=pw1]', 'SenhaDoTeste1');
   await w.fill('#dlg [name=pw2]', 'SenhaDoTeste1');
   await ok();
@@ -143,8 +144,8 @@ try {
   await w.waitForSelector('tr[data-name="financeiro"]');
   await w.click('tr[data-name="financeiro"] td.name');
   await w.click('#btn-dono');
-  await w.fill('#dlg [name=owner]', 'bfuser' + tag);
-  await w.fill('#dlg [name=group]', 'bfui' + tag);
+  await w.selectOption('#dlg [name=owner]', 'bfuser' + tag);
+  await w.selectOption('#dlg [name=group]', 'bfui' + tag);
   await ok();
   await ok();
   await w.waitForFunction((t) => document.querySelector('tr[data-name="financeiro"] td:nth-child(3)')?.textContent === 'bfuser' + t, tag);

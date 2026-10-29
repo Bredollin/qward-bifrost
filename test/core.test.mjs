@@ -127,6 +127,8 @@ test('su: elevação com senha de root', { skip: skip || (!E.BIFROST_TEST_ROOTPA
   const ops = new Ops(s, { policy });
   try {
     await s.testElevation();
+    // su -c no Debian não traz sbin no PATH; o Bifrost acrescenta.
+    assert.equal((await s.run('command -v useradd >/dev/null && echo ok', { elevated: true })).stdout.trim(), 'ok');
     await s.run(`rm -rf ${BASE}-su && mkdir -p ${BASE}-su`, { elevated: true });
     await ops.execute('mkdir', { path: `${BASE}-su/via-su` });
     const l = await ops.list(`${BASE}-su`, { elevated: true });
