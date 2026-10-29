@@ -131,7 +131,10 @@ function showElevation(method) {
   b.textContent = on ? 'Sair do root' : 'Elevar permissão';
   b.classList.toggle('on', on);
   $('#ver-root').disabled = !on;
-  if (!on) $('#ver-root').checked = false;
+  if (!on && $('#ver-root').checked) {
+    $('#ver-root').checked = false;
+    go(state.cwd).catch(() => {});
+  }
 }
 
 // Pede sudo ou su com a sessão já aberta. Retorna true se ficou root.
@@ -505,7 +508,10 @@ function dialog({ title, body, okText = 'Continuar', danger = false, onOk }) {
 
 // Fluxo de toda alteração: formulário -> plano (o que vai acontecer) -> confirmação -> execução -> registro.
 async function operation({ title, fields, op, args, after }) {
-  if (state.info.elevation === 'none' && !(await elevate('Esta alteração precisa de root. Eleve a permissão para continuar.'))) return;
+  if (state.info.elevation === 'none' && !(await elevate('Esta alteração precisa de root. Eleve a permissão para continuar.'))) {
+    status('Cancelado: esta alteração precisa de root.');
+    return;
+  }
   let a, plan, values;
   const filled = await dialog({
     title,
