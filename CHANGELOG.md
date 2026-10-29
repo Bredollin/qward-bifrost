@@ -5,6 +5,9 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Versões: 
 ## [Não lançado]
 
 ### Adicionado
+- Botão **＋ Novo arquivo**: cria arquivo vazio (`touch`, não sobrescreve), com permissão opcional e as mesmas travas da nova pasta.
+- Botão **Apagar** (risco alto): só dentro das pastas permitidas, nunca na raiz delas nem em `.ssh`; confirma digitando o nome (conferido também no núcleo). Pasta com conteúdo só com "recursivo" + digitar `entendo`; o resumo mostra quantos itens serão apagados. Atalho apaga só o atalho. Recursivo bloqueado se houver `.ssh` ou disco montado dentro.
+- Botão **Acesso total** (risco alto): o usuário escolhido vira dono da pasta e de tudo dentro, com ler, gravar e entrar (`chown -R` + `chmod -R u+rwX`). Não dá sudo nem root; bloqueado com `.ssh` ou disco montado dentro.
 - GitHub Actions gera o .exe no Windows a cada push e publica Release nas tags `v*`.
 - Botão **Elevar para root** no topo: entra como usuário comum e troca para root com `su` (senha do root) só quando precisar; "Sair do root" volta ao usuário comum. Elevar e sair vão para o registro.
 - Alteração sem elevação abre a janela de elevar antes de continuar.

@@ -152,6 +152,68 @@ try {
   await w.click('tr[data-name="financeiro"] td.name');
   await shot('08-arquivos');
 
+  // Novo arquivo vazio.
+  await w.dblclick('tr[data-name="financeiro"] td.name');
+  await w.waitForFunction((b) => document.querySelector('#caminho').value === b + '/financeiro', BASE);
+  await w.click('#btn-novo-arquivo');
+  await w.fill('#dlg [name=nome]', 'leia-me.txt');
+  await w.fill('#dlg [name=mode]', '600');
+  await ok();
+  await w.waitForSelector('.risk.baixo');
+  await shot('10-confirmar-novo-arquivo');
+  await ok();
+  await w.waitForSelector('tr[data-name="leia-me.txt"]');
+  assert.equal(await w.textContent('tr[data-name="leia-me.txt"] td.perm'), '-rw-------');
+
+  // Apagar arquivo: nome errado não passa; certo apaga.
+  await w.click('tr[data-name="leia-me.txt"] td.name');
+  await w.click('#btn-apagar');
+  await w.fill('#dlg [name=confirmName]', 'leia');
+  await ok();
+  await w.waitForSelector('#dlg-erro:not([hidden])');
+  assert.match(await w.textContent('#dlg-erro'), /digite exatamente/);
+  await w.fill('#dlg [name=confirmName]', 'leia-me.txt');
+  await shot('11-apagar-arquivo');
+  await ok();
+  await w.waitForSelector('.risk.alto');
+  await w.check('#dlg [name=entendo]');
+  await ok();
+  await w.waitForSelector('tr[data-name="leia-me.txt"]', { state: 'detached' });
+
+  // Acesso total para o usuário criado, depois apagar a pasta com tudo dentro.
+  await w.click('#btn-nova-pasta');
+  await w.fill('#dlg [name=nome]', 'sub');
+  await ok();
+  await ok();
+  await w.waitForSelector('tr[data-name="sub"]');
+  await w.click('#btn-subir');
+  await w.waitForSelector('tr[data-name="financeiro"]');
+  await w.click('tr[data-name="financeiro"] td.name');
+  await w.click('#btn-acesso-total');
+  await w.selectOption('#dlg [name=user]', 'bfuser' + tag);
+  await ok();
+  await w.waitForSelector('.risk.alto');
+  await shot('12-confirmar-acesso-total');
+  await w.check('#dlg [name=entendo]');
+  await ok();
+  await w.waitForFunction(() => document.querySelector('tr[data-name="financeiro"] td.perm')?.textContent.startsWith('drwx'));
+
+  await w.click('tr[data-name="financeiro"] td.name');
+  await w.click('#btn-apagar');
+  await w.fill('#dlg [name=confirmName]', 'financeiro');
+  await w.check('#dlg [name=recursive]');
+  await ok();
+  await w.waitForSelector('#dlg [name=entendo]:invalid');
+  await w.fill('#dlg [name=entendo]', 'entendo');
+  await shot('13-apagar-pasta-recursivo');
+  await ok();
+  await w.waitForSelector('.risk.alto');
+  assert.match(await w.textContent('#dlg-body'), /TUDO dentro dela \(2 itens\)/);
+  await shot('14-confirmar-apagar-pasta');
+  await w.check('#dlg [name=entendo]');
+  await ok();
+  await w.waitForSelector('tr[data-name="financeiro"]', { state: 'detached' });
+
   await w.click('[data-tab=registro]');
   await w.waitForSelector('#lista-registro tr');
   const reg = await w.textContent('#lista-registro');

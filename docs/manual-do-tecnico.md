@@ -59,6 +59,15 @@ Receitas comuns:
 ### Dono e grupo
 Selecione → **Dono e grupo** → escolha da lista → Continuar → confira.
 
+### Criar arquivo vazio
+**＋ Novo arquivo** → nome → (opcional) permissão, ex. `660` → Continuar → confira. Se já existir, nada é sobrescrito.
+
+### Acesso total
+Selecione a pasta → **Acesso total** → escolha o usuário → confira. Ele vira dono da pasta e de tudo dentro, com ler, gravar e entrar. Não vira administrador do servidor (sem sudo, sem root).
+
+### Apagar
+Selecione → **Apagar** → digite o nome do item → confira. Pasta com coisas dentro: marque **recursivo** e digite `entendo`; a confirmação mostra quantos itens vão sumir. **Não tem volta.**
+
 ## 4. Usuários e grupos
 
 - **＋ Novo usuário**: nome em letras minúsculas (ex. `joao_silva`), grupos extras separados por vírgula, shell (`/usr/sbin/nologin` para quem só usa compartilhamento), senha.

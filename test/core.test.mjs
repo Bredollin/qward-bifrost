@@ -84,6 +84,48 @@ test(`${ELEV}: elevação, pastas, permissões, usuários`, { skip }, async () =
     await s.run(`ln -sfn /nao/existe ${BASE}/link-quebrado`, { elevated: true });
     await assert.rejects(ops.execute('move', { from: `${BASE}/renomeada`, to: `${BASE}/link-quebrado` }), /existe/);
 
+    // Criar arquivo vazio: não sobrescreve, aceita permissão, mesmas travas do mkdir.
+    await ops.execute('touch', { path: `${BASE}/projetos/leia-me.txt`, mode: '640' });
+    await assert.rejects(ops.execute('touch', { path: `${BASE}/projetos/leia-me.txt` }), /existe/);
+    await assert.rejects(ops.plan('touch', { path: '/etc/bifrost.txt' }), /fora das pastas/);
+    await assert.rejects(ops.plan('touch', { path: `${BASE}/atalho-etc/x` }), /fora das pastas/);
+    await assert.rejects(ops.plan('touch', { path: `${BASE}/.ssh` }), /protegido/);
+    l = await ops.list(`${BASE}/projetos`);
+    assert.ok(l.entries.find((e) => e.name === 'leia-me.txt' && e.type === 'arquivo' && e.perms === '-rw-r-----' && e.size === 0));
+
+    // Acesso total: vira dono de tudo com rwX; nunca root, nunca onde há .ssh.
+    await s.run(`chown -R root:root ${BASE}/projetos && chmod 600 ${BASE}/projetos/leia-me.txt`, { elevated: true });
+    assert.equal((await ops.plan('fullaccess', { path: `${BASE}/projetos`, user: u })).risk, 'alto');
+    await ops.execute('fullaccess', { path: `${BASE}/projetos`, user: u });
+    l = await ops.list(`${BASE}/projetos`);
+    assert.ok(l.entries.find((e) => e.name === 'leia-me.txt' && e.owner === u && e.perms === '-rw-------'));
+    assert.ok((await ops.list(BASE)).entries.find((e) => e.name === 'projetos' && e.owner === u && e.perms.startsWith('drwx')));
+    await assert.rejects(ops.plan('fullaccess', { path: `${BASE}/projetos`, user: 'root' }), /Bloqueado/);
+    await s.run(`mkdir -p ${BASE}/casa/.ssh && touch ${BASE}/casa/.ssh/authorized_keys`, { elevated: true });
+    await assert.rejects(ops.plan('fullaccess', { path: `${BASE}/casa`, user: u }), /SSH/);
+    await assert.rejects(ops.plan('fullaccess', { path: `${BASE}/atalho-etc`, user: u }), /fora das pastas/);
+
+    // Apagar: confirma pelo nome; pasta com conteúdo só com recursivo + "entendo"; atalho apaga só o atalho.
+    await assert.rejects(ops.plan('rm', { path: `${BASE}/projetos/leia-me.txt`, confirmName: 'outro' }), /digite exatamente/);
+    await ops.execute('rm', { path: `${BASE}/projetos/leia-me.txt`, confirmName: 'leia-me.txt' });
+    assert.ok(!(await ops.list(`${BASE}/projetos`)).entries.find((e) => e.name === 'leia-me.txt'));
+    await ops.execute('mkdir', { path: `${BASE}/projetos/sub` });
+    await ops.execute('touch', { path: `${BASE}/projetos/sub/a.txt` });
+    await s.run(`ln -sfn ${BASE}/projetos ${BASE}/atalho-proj`, { elevated: true });
+    await ops.execute('rm', { path: `${BASE}/atalho-proj`, confirmName: 'atalho-proj', recursive: true, entendo: 'entendo' });
+    assert.ok((await ops.list(`${BASE}/projetos`)).entries.find((e) => e.name === 'sub'), 'apagar o atalho não pode apagar o destino');
+    await assert.rejects(ops.execute('rm', { path: `${BASE}/projetos`, confirmName: 'projetos' }), /not empty|não está vazio|vazio/i);
+    await assert.rejects(ops.plan('rm', { path: `${BASE}/projetos`, confirmName: 'projetos', recursive: true }), /entendo/);
+    const pr = await ops.plan('rm', { path: `${BASE}/projetos`, confirmName: 'projetos', recursive: true, entendo: 'entendo' });
+    assert.equal(pr.risk, 'alto'); assert.match(pr.summary, /3 itens/);
+    await ops.execute('rm', { path: `${BASE}/projetos`, confirmName: 'projetos', recursive: true, entendo: 'entendo' });
+    assert.ok(!(await ops.list(BASE)).entries.find((e) => e.name === 'projetos'));
+    await assert.rejects(ops.plan('rm', { path: `${BASE}/casa`, confirmName: 'casa', recursive: true, entendo: 'entendo' }), /SSH/);
+    await assert.rejects(ops.plan('rm', { path: `${BASE}/casa/.ssh`, confirmName: '.ssh', recursive: true, entendo: 'entendo' }), /protegido/);
+    await assert.rejects(ops.plan('rm', { path: '/srv', confirmName: 'srv' }), /fora das pastas/);
+    await assert.rejects(ops.plan('rm', { path: '/etc/hostname', confirmName: 'hostname' }), /fora das pastas/);
+    await assert.rejects(ops.plan('rm', { path: `${BASE}/atalho-etc/hostname`, confirmName: 'hostname' }), /fora das pastas/);
+
     const log = await readFile(join(dir, 'audit.log'), 'utf8');
     assert.ok(log.includes('"tecnico":"teste"'));
     assert.ok(!log.includes('SenhaNova123'), 'senha não pode ir para o log');

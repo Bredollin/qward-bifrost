@@ -33,6 +33,8 @@ O Bifrost cria usuários e muda permissões com poder de root. Estas são as tra
 - Recursivo bloqueado em pasta de primeiro nível e nas listadas em `noRecursive`.
 - Nenhum caminho com um nome de `protectedNames` (padrão: `.ssh`) pode ser alterado, para proteger as chaves SSH dos usuários.
 - Ninguém é colocado (criar usuário, pôr em grupo, trocar grupo) num grupo de `blockedGroups`: são grupos que dão poder de administrador.
+- **Apagar** e **Acesso total** recursivos são bloqueados se houver `.ssh` ou um disco montado dentro da pasta (`/proc/mounts`). Apagar um atalho apaga só o atalho, nunca o destino.
+- **Acesso total** não dá sudo nem root: o usuário vira dono só da pasta escolhida dentro da área permitida.
 - **setuid** (permissão `4xxx`) é bloqueado; setgid (`2xxx`) e sticky (`1xxx`) são liberados.
 - Ler/navegar é livre (inclusive `/etc`), alterar não.
 - Chave SSH só é lida se o técnico a escolheu pelo diálogo do Windows.
@@ -41,7 +43,7 @@ O Bifrost cria usuários e muda permissões com poder de root. Estas são as tra
 
 ## 4. Confirmação
 
-Toda alteração passa por uma tela com resumo em português, nível de risco e o comando exato. Risco **alto** (recursivo, criar usuário, definir senha) exige marcar "Conferi e quero fazer isso".
+Toda alteração passa por uma tela com resumo em português, nível de risco e o comando exato. Risco **alto** (recursivo, criar usuário, definir senha, apagar, acesso total) exige marcar "Conferi e quero fazer isso". Apagar pede também o nome digitado e, se recursivo, a palavra `entendo`; o núcleo confere os dois.
 
 ## 5. Registro
 

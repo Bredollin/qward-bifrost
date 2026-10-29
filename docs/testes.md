@@ -12,7 +12,7 @@ npm test
 
 O servidor precisa ter o usuário com sudo e uma pasta `/srv`. Sem `BIFROST_TEST_HOST`, só roda o teste de validação.
 
-Cobre: aspas e validação; sudo (pastas, nomes com espaço e aspas, mover sem sobrescrever, grupo, usuário, senha, dono, setgid, bloqueio de link para `/etc`, bloqueio fora da área, injeção no nome, registro sem senha, login com a senha nova); sudo com senha errada; su (elevação, pasta como root, usuário, senha, senha errada).
+Cobre: aspas e validação; sudo (pastas, nomes com espaço e aspas, mover sem sobrescrever, grupo, usuário, senha, dono, setgid, bloqueio de link para `/etc`, bloqueio fora da área, injeção no nome, criar arquivo vazio sem sobrescrever, acesso total, apagar com nome digitado e `entendo`, atalho apaga só o atalho, bloqueio com `.ssh` dentro, registro sem senha, login com a senha nova); sudo com senha errada; su (elevação, pasta como root, usuário, senha, senha errada).
 
 ### Servidor de teste com Docker
 
@@ -40,7 +40,7 @@ Abre o app de verdade (Electron + Playwright), conecta no servidor de teste e fa
 npm run test:ui -- capturas    # Linux sem tela: xvfb-run -a npm run test:ui -- capturas
 ```
 
-Cobre: confirmar servidor, criar pasta, entrar, criar com permissão, nome malicioso como texto, grade de permissões (2770), bloqueio em `/etc`, grupo, usuário com senha, dono e grupo, registro sem senha.
+Cobre: confirmar servidor, criar pasta, entrar, criar com permissão, nome malicioso como texto, grade de permissões (2770), bloqueio em `/etc`, grupo, usuário com senha, dono e grupo, novo arquivo, apagar arquivo (nome errado recusado), acesso total, apagar pasta recursiva, registro sem senha.
 
 ## Resultado em 2026-10-29
 

@@ -12,6 +12,10 @@ O Bifrost só usa comandos que já vêm no Linux, com alternativas onde as distr
 | Criar grupo | `groupadd` | `addgroup` |
 | Pôr em grupo | `usermod -aG` | `addgroup usuario grupo` |
 | Senha | `chpasswd` (entrada padrão) | |
+| Criar arquivo | `touch` | |
+| Apagar | `rm -f`, `rmdir`, `rm -rf` | |
+| Acesso total | `chown -R` + `chmod -R u+rwX` | |
+| Travas do recursivo | `find -name .ssh`, `awk` em `/proc/mounts`, `find \| wc -l` | |
 | Elevar (botão) | `su -c ... root` (pty); prompt reconhecido ou senha enviada após 1,5 s; corte em 20 s | `sudo -S` com a mesma senha se o su falhar |
 
 O tipo de arquivo vem de `stat %f` (número), não do texto traduzido, então funciona com o servidor em português.
