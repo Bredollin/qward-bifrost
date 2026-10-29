@@ -1,6 +1,6 @@
 {
   "name": "qward-bifrost",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Interface gráfica para gerenciar pastas, permissões, usuários e grupos em servidores Linux via SSH, sem instalar nada no servidor.",
   "main": "src/main.mjs",
   "scripts": {

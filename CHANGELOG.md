@@ -4,6 +4,8 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Versões: 
 
 ## [Não lançado]
 
+## [0.2.0] - 2026-10-29
+
 ### Adicionado
 - Botão **＋ Novo arquivo**: cria arquivo vazio (`touch`, não sobrescreve), com permissão opcional e as mesmas travas da nova pasta.
 - Botão **Apagar** (risco alto): só dentro das pastas permitidas, nunca na raiz delas nem em `.ssh`; confirma digitando o nome (conferido também no núcleo). Pasta com conteúdo só com "recursivo" + digitar `entendo`; o resumo mostra quantos itens serão apagados. Atalho apaga só o atalho. Recursivo bloqueado se houver `.ssh` ou disco montado dentro.
