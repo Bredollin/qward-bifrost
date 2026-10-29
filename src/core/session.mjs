@@ -112,28 +112,36 @@ export class Session {
     }
 
     // su precisa de terminal (pty): esperamos o prompt de senha, respondemos e separamos a saída pelo marcador.
-    let sentPw = false, sentIn = false;
-    const wrapped = `stty -echo 2>/dev/null; printf '%s\\n' ${MARK}; ${script}`;
-    // Sem prompt reconhecido o su ficaria esperando a senha para sempre: corta se não pediu senha em 20 s.
-    let timer;
+    let sentPw = false, sentIn = false, gotMark = false, timedOut = false;
+    // `su -c` (Debian 10+) não põe sbin no PATH: sem isso useradd, groupadd, usermod e chpasswd "não existem".
+    const wrapped = `PATH=/usr/local/sbin:/usr/sbin:/sbin:$PATH; export PATH; stty -echo 2>/dev/null; printf '%s\\n' ${MARK}; ${script}`;
+    // O prompt do su varia por distro e idioma: se não reconhecermos o texto em 1,5 s, a senha vai assim mesmo
+    // (o su lê do terminal). Se nada responder em 20 s, a sessão é fechada e vira erro, em vez de ficar presa.
+    const timers = [];
+    const sendPw = (stream) => {
+      if (sentPw) return;
+      sentPw = true;
+      stream.write((this.elevation.password || '') + '\n');
+    };
     const r = await this.exec(`su -c ${q(wrapped)} root`, {
       pty: true,
-      onStream: (stream) => (timer = setTimeout(() => !sentPw && stream.close(), 20000)),
+      onStream: (stream) => {
+        timers.push(setTimeout(() => sendPw(stream), 1500));
+        timers.push(setTimeout(() => !gotMark && ((timedOut = true), stream.close()), 20000));
+      },
       onOut: (out, stream) => {
-        if (!sentPw && SU_PROMPT.test(out)) {
-          sentPw = true;
-          stream.write((this.elevation.password || '') + '\n');
-        }
+        if (!sentPw && SU_PROMPT.test(out)) sendPw(stream);
         if (sentPw && !sentIn && out.includes(MARK)) {
-          sentIn = true;
+          sentIn = gotMark = true;
           if (stdin != null) stream.write(stdin + '\x04');
         }
       },
     });
-    clearTimeout(timer);
+    timers.forEach(clearTimeout);
     const all = r.stdout.replace(/\r\n/g, '\n');
     const i = all.indexOf(MARK + '\n');
     if (i < 0) {
+      if (timedOut) throw new Error('O su não respondeu em 20 s (prompt de senha não reconhecido ou servidor lento).');
       if (BAD_PW.test(all) || r.code !== 0) throw new Error('Elevação recusada pelo su (senha de root errada?).');
       throw new Error('Não foi possível elevar com su.');
     }

@@ -19,6 +19,8 @@ await mkdir(shots, { recursive: true });
 const dataDir = await mkdtemp(join(tmpdir(), 'bifrost-ui-'));
 const tag = String(Date.now() % 100000);
 const BASE = '/srv/bifrost-ui-' + tag;
+// Senha que o botão Elevar recebe: a do root em servidor sem sudo (BIFROST_TEST_ELEV=su), senão a do usuário (sudo).
+const elevPw = E.BIFROST_TEST_ELEV === 'su' ? E.BIFROST_TEST_ROOTPASS : E.BIFROST_TEST_PASS;
 
 const app = await _electron.launch({ executablePath: require('electron'), args: ['--no-sandbox', '.'], env: { ...process.env, BIFROST_DATA_DIR: dataDir } });
 const w = await app.firstWindow();
@@ -48,7 +50,7 @@ try {
   await ok();
   await w.waitForSelector('#dlg-erro:not([hidden])');
   await shot('03a-elevar-senha-errada');
-  await w.fill('#dlg [name=elevSenha]', E.BIFROST_TEST_PASS);
+  await w.fill('#dlg [name=elevSenha]', elevPw);
   await ok();
   await w.waitForFunction(() => /^root$/.test(document.querySelector('#srv-elev').textContent));
   await shot('03b-elevado');
@@ -62,11 +64,12 @@ try {
   await w.waitForFunction(() => document.querySelector('#caminho').value === '/srv');
   await w.click('#btn-nova-pasta');
   await w.waitForSelector('#dlg [name=elevSenha]');
-  await w.fill('#dlg [name=elevSenha]', E.BIFROST_TEST_PASS);
+  await w.fill('#dlg [name=elevSenha]', elevPw);
   await ok();
   await w.waitForSelector('#dlg [name=nome]');
   await w.fill('#dlg [name=nome]', 'bifrost-ui-' + tag);
-  await ok();
+  // Enter no campo confirma (antes acionava o Cancelar e fechava a janela).
+  await w.press('#dlg [name=nome]', 'Enter');
   await w.waitForSelector('.risk');
   await shot('03-confirmar-nova-pasta');
   await ok();
@@ -123,7 +126,7 @@ try {
   await w.waitForSelector(`#lista-grupos td:text-is("bfui${tag}")`);
   await w.click('#btn-novo-usuario');
   await w.fill('#dlg [name=nome]', 'bfuser' + tag);
-  await w.fill('#dlg [name=groups]', 'bfui' + tag);
+  await w.selectOption('#dlg [name=groups]', ['bfui' + tag]);
   await w.fill('#dlg [name=pw1]', 'SenhaDoTeste1');
   await w.fill('#dlg [name=pw2]', 'SenhaDoTeste1');
   await ok();
@@ -141,8 +144,8 @@ try {
   await w.waitForSelector('tr[data-name="financeiro"]');
   await w.click('tr[data-name="financeiro"] td.name');
   await w.click('#btn-dono');
-  await w.fill('#dlg [name=owner]', 'bfuser' + tag);
-  await w.fill('#dlg [name=group]', 'bfui' + tag);
+  await w.selectOption('#dlg [name=owner]', 'bfuser' + tag);
+  await w.selectOption('#dlg [name=group]', 'bfui' + tag);
   await ok();
   await ok();
   await w.waitForFunction((t) => document.querySelector('tr[data-name="financeiro"] td:nth-child(3)')?.textContent === 'bfuser' + t, tag);
@@ -165,7 +168,8 @@ try {
   // Limpeza do servidor de teste (o app não apaga nada, de propósito).
   const s = new Session();
   await s.connect({ host: E.BIFROST_TEST_HOST, port: E.BIFROST_TEST_PORT || 22, username: E.BIFROST_TEST_USER, password: E.BIFROST_TEST_PASS, confirmHost: async () => true });
-  s.setElevation('sudo', E.BIFROST_TEST_PASS);
+  if (E.BIFROST_TEST_ELEV === 'su') s.setElevation('su', E.BIFROST_TEST_ROOTPASS);
+  else s.setElevation('sudo', E.BIFROST_TEST_PASS);
   await s.run(`userdel -r bfuser${tag} 2>/dev/null; groupdel bfui${tag} 2>/dev/null; rm -rf ${BASE}`, { elevated: true });
   s.close();
 }

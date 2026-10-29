@@ -13,6 +13,10 @@ import { q, cleanPath, checkWritable, symbolicToOctal } from '../src/core/valida
 const E = process.env;
 const conn = { host: E.BIFROST_TEST_HOST, port: E.BIFROST_TEST_PORT || 22, username: E.BIFROST_TEST_USER, password: E.BIFROST_TEST_PASS };
 const skip = !conn.host && 'defina BIFROST_TEST_HOST para rodar os testes com servidor';
+// Servidor sem sudo (ex.: Debian mínimo): BIFROST_TEST_ELEV=su roda a suíte principal com su e pula os testes de sudo.
+const ELEV = E.BIFROST_TEST_ELEV === 'su' ? 'su' : 'sudo';
+const elevPw = ELEV === 'su' ? E.BIFROST_TEST_ROOTPASS : conn.password;
+const skipSudo = skip || (ELEV === 'su' && 'servidor sem sudo (BIFROST_TEST_ELEV=su)');
 const policy = { allowedRoots: ['/srv'], noRecursive: [], protectedNames: ['.ssh'], blockedGroups: ['sudo', 'wheel'] };
 const BASE = '/srv/bifrost-teste';
 
@@ -32,8 +36,8 @@ async function open(method, pw) {
   return s;
 }
 
-test('sudo: elevação, pastas, permissões, usuários', { skip }, async () => {
-  const s = await open('sudo', conn.password);
+test(`${ELEV}: elevação, pastas, permissões, usuários`, { skip }, async () => {
+  const s = await open(ELEV, elevPw);
   const dir = await mkdtemp(join(tmpdir(), 'bifrost-'));
   const audit = new Audit(join(dir, 'audit.log'));
   const ops = new Ops(s, { policy, audit, tecnico: 'teste', host: 'srv-teste' });
@@ -61,6 +65,9 @@ test('sudo: elevação, pastas, permissões, usuários', { skip }, async () => {
 
     await ops.execute('chown', { path: `${BASE}/projetos`, owner: u, group: g, recursive: true });
     await ops.execute('chmod', { path: `${BASE}/projetos`, mode: '2770' });
+    assert.equal((await ops.plan('chmod', { path: `${BASE}/projetos`, mode: '2777' })).risk, 'alto');
+    assert.equal((await ops.plan('chmod', { path: `${BASE}/projetos`, mode: '750' })).risk, 'medio');
+    assert.equal((await ops.plan('chown', { path: `${BASE}/projetos`, owner: 'root' })).risk, 'alto');
     l = await ops.list(BASE);
     const p = l.entries.find((e) => e.name === 'projetos');
     assert.equal(p.owner, u); assert.equal(p.group, g); assert.equal(p.perms, 'drwxrws---');
@@ -91,7 +98,7 @@ test('sudo: elevação, pastas, permissões, usuários', { skip }, async () => {
   }
 });
 
-test('sudo com senha errada é recusado', { skip }, async () => {
+test('sudo com senha errada é recusado', { skip: skipSudo }, async () => {
   const s = await open('sudo', 'errada');
   try {
     await assert.rejects(s.testElevation(), /recusada/);
@@ -100,7 +107,7 @@ test('sudo com senha errada é recusado', { skip }, async () => {
   }
 });
 
-test('entrar como usuário comum e elevar depois (botão Elevar)', { skip }, async () => {
+test('entrar como usuário comum e elevar depois (botão Elevar)', { skip: skipSudo }, async () => {
   const s = await open('none');
   const ops = new Ops(s, { policy });
   try {
@@ -123,6 +130,8 @@ test('su: elevação com senha de root', { skip: skip || (!E.BIFROST_TEST_ROOTPA
   const ops = new Ops(s, { policy });
   try {
     await s.testElevation();
+    // su -c no Debian não traz sbin no PATH; o Bifrost acrescenta.
+    assert.equal((await s.run('command -v useradd >/dev/null && echo ok', { elevated: true })).stdout.trim(), 'ok');
     await s.run(`rm -rf ${BASE}-su && mkdir -p ${BASE}-su`, { elevated: true });
     await ops.execute('mkdir', { path: `${BASE}-su/via-su` });
     const l = await ops.list(`${BASE}-su`, { elevated: true });

@@ -22,7 +22,7 @@ export class Ops {
   async sysinfo() {
     const r = await this.s.run(
       `. /etc/os-release 2>/dev/null; printf '%s\\n' "\${PRETTY_NAME:-Linux}"; uname -r; id -un; id -u; ` +
-        `command -v useradd >/dev/null && echo useradd || echo adduser`
+        `(PATH=/usr/local/sbin:/usr/sbin:/sbin:$PATH; command -v useradd >/dev/null) && echo useradd || echo adduser`
     );
     const [distro, kernel, user, uid, userTool] = r.stdout.trim().split('\n');
     return { distro, kernel, user, uid: Number(uid), userTool };
@@ -100,8 +100,10 @@ export class Ops {
         const rec = !!a.recursive;
         const path = checkWritable(await this.realpath(a.path), this.policy, { recursive: rec });
         const mode = cleanMode(a.mode);
-        return mk(op, `Mudar a permissão de ${path} para ${mode}${rec ? ' (em TUDO dentro dela)' : ''}`,
-          `chmod ${rec ? '-R ' : ''}${mode} -- ${q(path)}`, rec ? 'alto' : 'medio');
+        // "Outros" com escrita (ex.: 777, 2777): qualquer usuário do servidor altera ou apaga.
+        const world = (Number(mode.slice(-1)) & 2) === 2;
+        return mk(op, `Mudar a permissão de ${path} para ${mode}${rec ? ' (em TUDO dentro dela)' : ''}${world ? ' (ATENÇÃO: qualquer usuário do servidor poderá escrever)' : ''}`,
+          `chmod ${rec ? '-R ' : ''}${mode} -- ${q(path)}`, rec || world ? 'alto' : 'medio');
       }
       case 'chown': {
         const rec = !!a.recursive;
@@ -112,7 +114,8 @@ export class Ops {
         const R = rec ? '-R ' : '';
         const cmd = owner ? `chown ${R}${q(owner + (group ? ':' + group : ''))} -- ${q(path)}` : `chgrp ${R}${q(group)} -- ${q(path)}`;
         const what = [owner && `dono ${owner}`, group && `grupo ${group}`].filter(Boolean).join(' e ');
-        return mk(op, `Mudar ${what} de ${path}${rec ? ' (em TUDO dentro dela)' : ''}`, cmd, rec ? 'alto' : 'medio');
+        const root = owner === 'root' || owner === '0';
+        return mk(op, `Mudar ${what} de ${path}${rec ? ' (em TUDO dentro dela)' : ''}${root ? ' (dono root: só o root escreve)' : ''}`, cmd, rec || root ? 'alto' : 'medio');
       }
       case 'groupadd': {
         const name = cleanName(a.name, 'Grupo');
