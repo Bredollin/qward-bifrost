@@ -137,7 +137,7 @@ async function elevate(motivo) {
     title: 'Elevar para root (su)',
     body: [
       motivo ? el('p', { class: 'muted', text: motivo }) : null,
-      el('label', {}, 'Senha do root',
+      el('label', {}, 'Senha do root', el('span', { class: 'hint', text: 'root bloqueado? use a senha do usuário (sudo)' }),
         el('input', { name: 'elevSenha', type: 'password', required: true })),
       el('p', { class: 'muted small', text: 'A senha fica só na memória até você desconectar ou sair do root.' }),
     ],
@@ -145,7 +145,7 @@ async function elevate(motivo) {
     onOk: async (f) => {
       const password = f.elevSenha.value;
       f.elevSenha.value = '';
-      return (await api('elevate', { method: 'su', password })).elevation;
+      return (await api('elevate', { password })).elevation;
     },
   });
   if (!ok) return false;
