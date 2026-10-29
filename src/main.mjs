@@ -20,7 +20,7 @@ const pickedKeys = new Set(); // só lemos chaves escolhidas pelo diálogo do Wi
 const audit = () => new Audit(join(data(), 'registro-de-acoes.jsonl'));
 const known = () => new KnownHosts(join(data(), 'servidores-conhecidos.json'));
 
-// Política editável pelo responsável (Michael) em %APPDATA%\Qward Bifrost\politica.json
+// Política editável pelo administrador em %APPDATA%\Qward Bifrost\politica.json
 async function loadPolicy() {
   const f = join(data(), 'politica.json');
   try {

@@ -37,7 +37,7 @@ O Bifrost cria usuários e muda permissões com poder de root. Estas são as tra
 - Ler/navegar é livre (inclusive `/etc`), alterar não.
 - Chave SSH só é lida se o técnico a escolheu pelo diálogo do Windows.
 - A impressão digital confirmada só é gravada depois que a conexão funciona.
-- Quem ajusta a política é o responsável (Michael), editando o arquivo no PC do técnico. Ver [pendências](pendencias.md) para centralizar.
+- Quem ajusta a política é o administrador, editando o arquivo no PC do técnico. Ver [pendências](pendencias.md) para centralizar.
 
 ## 4. Confirmação
 

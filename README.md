@@ -4,7 +4,7 @@
 
 Programa para Windows que deixa os técnicos gerenciarem pastas, permissões, donos, grupos e usuários de servidores Linux **por SSH**, com interface gráfica. **Nada é instalado no servidor**: o Bifrost usa só o SSH e comandos que já existem em qualquer Linux.
 
-Criação do Brain (time de agentes do Michael Bredollin). Versão **0.1.0 (protótipo)**.
+Versão **0.1.0 (protótipo)**.
 
 ## O que ele faz
 

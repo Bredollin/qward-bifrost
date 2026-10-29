@@ -3,12 +3,12 @@
 Data: 2026-10-29 · Situação: aceita
 
 ## Contexto
-Usa um único usuário de manutenção nos servidores. O Michael definiu: conectar com usuário comum e depois elevar. Nem todo servidor tem sudo configurado.
+Usa um único usuário de manutenção nos servidores. Requisito: conectar com usuário comum e depois elevar. Nem todo servidor tem sudo configurado.
 
 ## Decisão
 Duas formas, escolhidas na janela do botão Elevar: `sudo -S` (senha do usuário, ou outra) e `su` (senha do root, via pseudo-terminal). Leitura roda sem elevação (com "Ver como root" opcional); alteração roda elevada. A elevação é testada ao ligar.
 
-Atualização (2026-10-29): por pedido do Michael, o login é sempre como usuário comum e a elevação acontece só dentro do app, pelo botão **Elevar permissão** (com "Sair do root"). A opção de elevar na tela de login foi removida.
+Atualização (2026-10-29): o login é sempre como usuário comum e a elevação acontece só dentro do app, pelo botão **Elevar permissão** (com "Sair do root"). A opção de elevar na tela de login foi removida.
 
 ## Consequências
 - Login direto como root não é necessário (e é desencorajado).
