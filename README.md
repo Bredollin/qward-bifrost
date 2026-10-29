@@ -27,7 +27,7 @@ Detalhes em [docs/seguranca.md](docs/seguranca.md).
 
 ## Para usar (técnico)
 
-Baixe o `QwardBifrost-<versão>-portable.exe`, dê dois cliques e siga o [manual do técnico](docs/manual-do-tecnico.md). Não precisa instalar.
+Baixe o `QwardBifrost-<versão>-portable.exe` em **Releases** (ou em **Actions → exe-windows → última execução → Artifacts**), dê dois cliques e siga o [manual do técnico](docs/manual-do-tecnico.md). Não precisa instalar.
 
 ## Para desenvolver
 
