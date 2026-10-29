@@ -40,12 +40,8 @@ function status(msg, isErr = false) {
 const form = $('#form-login');
 
 function syncLogin() {
-  const auth = form.auth.value, elev = form.elev.value;
+  const auth = form.auth.value;
   $$('[data-auth]').forEach((n) => (n.hidden = n.dataset.auth !== auth));
-  $('[data-elev="sudo"]').hidden = !(elev === 'sudo' && auth === 'senha');
-  const needPw = elev === 'su' || (elev === 'sudo' && (auth === 'chave' || !form.samePassword.checked));
-  $('[data-elev="pw"]').hidden = !needPw;
-  $('#elev-label').textContent = elev === 'su' ? 'Senha do root' : 'Senha do sudo';
 }
 form.addEventListener('change', syncLogin);
 syncLogin();
@@ -56,14 +52,12 @@ $('#btn-chave').addEventListener('click', async () => {
 });
 
 async function doConnect(trustFingerprint) {
-  const auth = form.auth.value, elev = form.elev.value;
-  const same = elev === 'sudo' && auth === 'senha' && form.samePassword.checked;
+  const auth = form.auth.value;
   return api('connect', {
     tecnico: form.tecnico.value, host: form.host.value, port: form.port.value, username: form.username.value,
     password: auth === 'senha' ? form.password.value : undefined,
     keyPath: auth === 'chave' ? form.keyPath.value : undefined,
     passphrase: auth === 'chave' ? form.passphrase.value : undefined,
-    elevation: { method: elev, samePassword: same, password: same ? undefined : form.elevPassword.value },
     trustFingerprint,
   });
 }
@@ -84,7 +78,7 @@ form.addEventListener('submit', async (ev) => {
       if (!ok) throw new Error('Conexão cancelada.');
       info = await doConnect(e.fingerprint);
     }
-    form.password.value = form.elevPassword.value = form.passphrase.value = '';
+    form.password.value = form.passphrase.value = '';
     enterApp(info);
   } catch (e) {
     err.textContent = e.message;
@@ -113,13 +107,59 @@ function enterApp(info) {
   $('#tela-login').hidden = true;
   $('#tela-app').hidden = false;
   $('#srv-info').textContent = `${form.host.value} · ${info.distro} · ${info.user}`;
-  const e = $('#srv-elev');
-  e.textContent = info.elevation === 'none' ? 'sem elevação (somente leitura na prática)' : `elevação: ${info.elevation}`;
-  e.classList.toggle('root', info.elevation !== 'none');
+  showElevation(info.elevation);
   $('#area-permitida').textContent = 'Alterações permitidas em: ' + info.policy.allowedRoots.join(', ');
   const start = info.policy.allowedRoots[0] || '/';
   go(start).catch(() => go('/'));
 }
+
+// ---------------- Elevação ----------------
+
+function showElevation(method) {
+  state.info.elevation = method;
+  const on = method !== 'none';
+  const e = $('#srv-elev');
+  e.textContent = on ? 'root' : state.info.user;
+  e.classList.toggle('root', on);
+  const b = $('#btn-elevar');
+  b.textContent = on ? 'Sair do root' : 'Elevar para root';
+  b.classList.toggle('on', on);
+  $('#ver-root').disabled = !on;
+  if (!on && $('#ver-root').checked) {
+    $('#ver-root').checked = false;
+    go(state.cwd).catch(() => {});
+  }
+}
+
+// Troca para root (su) com a sessão já aberta. Retorna true se ficou root.
+async function elevate(motivo) {
+  const ok = await dialog({
+    title: 'Elevar para root (su)',
+    body: [
+      motivo ? el('p', { class: 'muted', text: motivo }) : null,
+      el('label', {}, 'Senha do root',
+        el('input', { name: 'elevSenha', type: 'password', required: true })),
+      el('p', { class: 'muted small', text: 'A senha fica só na memória até você desconectar ou sair do root.' }),
+    ],
+    okText: 'Elevar',
+    onOk: async (f) => {
+      const password = f.elevSenha.value;
+      f.elevSenha.value = '';
+      return (await api('elevate', { method: 'su', password })).elevation;
+    },
+  });
+  if (!ok) return false;
+  showElevation(ok);
+  status('Permissão elevada: agora as alterações rodam como root.');
+  return true;
+}
+
+$('#btn-elevar').addEventListener('click', async () => {
+  if (state.info.elevation === 'none') return elevate();
+  await api('dropElevation').catch(() => {});
+  showElevation('none');
+  status('Saiu do root.');
+});
 
 $('#btn-sair').addEventListener('click', async () => {
   await api('disconnect').catch(() => {});
@@ -455,6 +495,10 @@ function dialog({ title, body, okText = 'Continuar', danger = false, onOk }) {
 
 // Fluxo de toda alteração: formulário -> plano (o que vai acontecer) -> confirmação -> execução -> registro.
 async function operation({ title, fields, op, args, after }) {
+  if (state.info.elevation === 'none' && !(await elevate('Esta alteração precisa de root. Eleve a permissão para continuar.'))) {
+    status('Cancelado: esta alteração precisa de root.');
+    return;
+  }
   let a, plan, values;
   const filled = await dialog({
     title,

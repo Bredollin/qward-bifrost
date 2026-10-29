@@ -37,7 +37,7 @@ flowchart LR
 
 - **sudo**: `sudo -S -k -p '' -- sh -c '<script>'`, senha pela entrada padrão (nunca na linha de comando). `-k` força pedir a senha sempre, o que deixa o comportamento previsível.
 - **su**: `su -c '<script>' root` num pseudo-terminal; o Bifrost espera o prompt de senha (pt, en, es, de, fr), responde e separa a saída por um marcador.
-- A elevação é testada ao conectar (`id -u` precisa dar `0`).
+- A elevação é testada quando é ligada (`id -u` precisa dar `0`): só pelo botão Elevar (IPC `elevate`, aceita apenas `su`), nunca no login. Se o teste falhar, a sessão volta a `none`. `dropElevation` desliga e apaga a senha da memória.
 
 ## Dados no PC do técnico
 

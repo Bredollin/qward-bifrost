@@ -3,7 +3,7 @@
 Data: 2026-10-29 · Situação: aceita
 
 ## Contexto
-Os técnicos usam Windows. A ferramenta não pode ser instalada no servidor; precisa falar SSH do lado do técnico. O Michael pediu app desktop para Windows.
+Os técnicos usam Windows. A ferramenta não pode ser instalada no servidor; precisa falar SSH do lado do técnico. Requisito: app desktop para Windows.
 
 ## Decisão
 Electron (tela em HTML/JS) + biblioteca `ssh2` (JavaScript puro, sem binário nativo obrigatório). Entrega como `.exe` portátil gerado pelo `electron-builder`.

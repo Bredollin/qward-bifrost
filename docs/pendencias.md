@@ -2,7 +2,7 @@
 
 Atualizado em 2026-10-29. Em **negrito** o padrão adotado no protótipo.
 
-## Para o Michael decidir
+## Decisões em aberto
 
 1. **Pastas permitidas**: padrão `/srv, /home, /var/www, /opt, /mnt, /media, /dados, /data`. Quais pastas os clientes da Qward usam de verdade (ex.: compartilhamentos Samba)?
 2. **Apagar**: **fora na 0.1.0**. Incluir "apagar pasta vazia"? Com lixeira?

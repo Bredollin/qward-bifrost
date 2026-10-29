@@ -16,7 +16,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>Qward Bifrost</h1>
-          <p class="muted">A ponte até os servidores Linux, sem terminal.</p>
+          <p class="muted lema">No dia mais claro, na noite mais densa, nenhum servidor escapa à nossa luz.</p>
         </div>
       </div>
 
@@ -55,19 +55,6 @@
         </label>
       </div>
 
-      <fieldset class="seg">
-        <legend>Elevar permissões (para alterar arquivos e usuários)</legend>
-        <label><input type="radio" name="elev" value="sudo" checked> sudo</label>
-        <label><input type="radio" name="elev" value="su"> su (senha do root)</label>
-        <label><input type="radio" name="elev" value="none"> Não elevar</label>
-      </fieldset>
-      <div data-elev="sudo">
-        <label class="check"><input type="checkbox" name="samePassword" checked> A senha do sudo é a mesma do login</label>
-      </div>
-      <label data-elev="pw" hidden><span id="elev-label">Senha de elevação</span>
-        <input name="elevPassword" type="password">
-      </label>
-
       <p id="login-erro" class="erro" role="alert" hidden></p>
       <button class="btn primary big" id="btn-conectar" type="submit">Conectar</button>
       <p class="muted small">As senhas ficam só na memória enquanto o programa está aberto. Nada é instalado no servidor.</p>
@@ -89,6 +76,7 @@
       <div class="server">
         <span id="srv-info" class="chip"></span>
         <span id="srv-elev" class="chip"></span>
+        <button class="btn elevar" id="btn-elevar" type="button">Elevar para root</button>
         <button class="btn ghost" id="btn-sair">Desconectar</button>
       </div>
     </header>

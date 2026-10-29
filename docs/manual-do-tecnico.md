@@ -1,6 +1,6 @@
 # Manual do técnico
 
-Para quem nunca usou o terminal do Linux. Se travar em algum passo, chame o Michael.
+Para quem nunca usou o terminal do Linux. Se travar em algum passo, chame o administrador.
 
 ## 1. Abrir
 
@@ -15,11 +15,12 @@ Dê dois cliques em `QwardBifrost-<versão>-portable.exe`. Não precisa instalar
 | Porta | normalmente 22 |
 | Usuário SSH | o usuário de manutenção da Qward |
 | Senha ou Chave SSH | o que o servidor usa |
-| Elevar permissões | **sudo** se o usuário de manutenção tem sudo; **su** se precisa da senha do root; **Não elevar** só para olhar |
+
+O login é sempre como usuário comum. Depois de conectar, o botão laranja **Elevar para root** (no topo, à direita) troca do usuário de manutenção para root (`su`, pede a senha do root). O selo muda do nome do usuário para "root" e o botão vira **Sair do root**. Se você tentar uma alteração sem elevar, o Bifrost abre essa janela sozinho. Depois de elevar, você continua como root até clicar em **Sair do root** ou desconectar.
 
 Clique em **Conectar**.
 
-**Primeira vez num servidor:** aparece a "impressão digital" (um código `SHA256:...`). Ela é a identidade do servidor. Se tiver dúvida se é o servidor certo, pergunte antes de clicar em **Confio neste servidor**. Se um dia o Bifrost disser que **a identidade mudou**, pare e avise o Michael: pode ser servidor reinstalado ou alguém no meio do caminho.
+**Primeira vez num servidor:** aparece a "impressão digital" (um código `SHA256:...`). Ela é a identidade do servidor. Se tiver dúvida se é o servidor certo, pergunte antes de clicar em **Confio neste servidor**. Se um dia o Bifrost disser que **a identidade mudou**, pare e avise o administrador: pode ser servidor reinstalado ou alguém no meio do caminho.
 
 ## 3. Arquivos
 
@@ -75,9 +76,9 @@ A aba **Registro** mostra tudo o que foi feito neste computador: quando, quem, s
 | Mensagem | O que fazer |
 |---|---|
 | Usuário ou senha/chave incorretos | confira e tente de novo |
-| Elevação recusada pelo sudo/su | senha de elevação errada, ou o usuário não tem sudo: tente **su** ou chame o Michael |
+| Elevação recusada pelo su | senha do root errada: confira com o administrador |
 | Bloqueado: ... fora das pastas permitidas | é proposital; pastas do sistema não se mexem pelo Bifrost |
 | Tempo esgotado ao conectar | VPN ligada? Servidor ligado? Porta certa? |
 | Destino já existe | escolha outro nome |
 
-O que o Bifrost **não** faz de propósito (por enquanto): apagar arquivos, apagar usuários e editar arquivos do sistema. Para isso, chame o Michael.
+O que o Bifrost **não** faz de propósito (por enquanto): apagar arquivos, apagar usuários e editar arquivos do sistema. Para isso, chame o administrador.

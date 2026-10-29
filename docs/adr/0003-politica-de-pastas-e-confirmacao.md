@@ -11,4 +11,4 @@ A ferramenta dá poder de root a quem não conhece o terminal. Um `chmod -R 777 
 - Sem apagar arquivos nem usuários na 0.1.0.
 
 ## Consequências
-- Algumas tarefas legítimas (ex.: mexer em `/etc/samba`) continuam com o Michael. É de propósito.
+- Algumas tarefas legítimas (ex.: mexer em `/etc/samba`) continuam com o administrador, via terminal. É de propósito.
