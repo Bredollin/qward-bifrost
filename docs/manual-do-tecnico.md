@@ -4,7 +4,7 @@ Para quem nunca usou o terminal do Linux. Se travar em algum passo, chame o admi
 
 ## 1. Abrir
 
-Dê dois cliques em `QwardBifrost-<versão>-portable.exe`. Não precisa instalar. Na primeira vez o Windows pode avisar que o programa não é assinado: clique em **Mais informações → Executar assim mesmo**.
+Dê dois cliques em `QwardBifrost.exe`. Não precisa instalar. Na primeira vez o Windows pode avisar que o programa não é assinado: clique em **Mais informações → Executar assim mesmo**.
 
 ## 2. Conectar
 
@@ -28,8 +28,20 @@ Clique em **Conectar**.
 - **Clique** num item para selecionar; aí os botões de ação ficam ativos.
 - **Ver como root**: mostra pastas que o usuário de manutenção não consegue abrir.
 
+### Avisos de área (faixa acima dos botões)
+
+| Faixa | Onde | O que acontece |
+|---|---|---|
+| Laranja, **Pasta do sistema · somente leitura** | `/`, `/bin`, `/etc`, `/usr`, `/boot` e tudo fora da área liberada | Dá para olhar, não dá para mudar: os botões de alteração ficam desligados, mesmo como root. A faixa diz para que serve a pasta e traz atalhos **Ir para** as áreas liberadas. |
+| Vermelha, **Pasta protegida** | qualquer `.ssh` | Chaves de acesso: o Bifrost não altera, para ninguém perder o acesso ao servidor. |
+| Verde, **Área liberada** | dentro de `/srv`, `/home`, `/var/www`, `/opt`, `/mnt`, `/media`, `/dados`, `/data` | Botões ligados; toda alteração mostra o comando, pede confirmação e vai para o registro. |
+
+Na raiz (`/`), as pastas da área liberada aparecem com a etiqueta verde **área liberada**; `.ssh` aparece com **protegida**.
+
+Os botões seguem cores fixas: **verde cheio** cria, **contorno** muda o item selecionado, **vermelho** apaga, **laranja** eleva para root.
+
 ### Criar pasta
-**＋ Nova pasta** → nome → (opcional) permissão, ex. `770` → Continuar → confira → **Fazer agora**.
+**Nova pasta** → nome → (opcional) permissão, ex. `770` → Continuar → confira → **Fazer agora**.
 
 ### Renomear ou mover
 Selecione → **Renomear / mover** → edite o caminho completo. Se já existir algo com esse nome no destino, o Bifrost **não** sobrescreve.
@@ -60,7 +72,7 @@ Receitas comuns:
 Selecione → **Dono e grupo** → escolha da lista → Continuar → confira.
 
 ### Criar arquivo vazio
-**＋ Novo arquivo** → nome → (opcional) permissão, ex. `660` → Continuar → confira. Se já existir, nada é sobrescrito.
+**Novo arquivo** → nome → (opcional) permissão, ex. `660` → Continuar → confira. Se já existir, nada é sobrescrito.
 
 ### Acesso total
 Selecione a pasta → **Acesso total** → escolha o usuário → confira. Ele vira dono da pasta e de tudo dentro, com ler, gravar e entrar. Não vira administrador do servidor (sem sudo, sem root).
@@ -70,8 +82,8 @@ Selecione → **Apagar** → digite o nome do item → confira. Pasta com coisas
 
 ## 4. Usuários e grupos
 
-- **＋ Novo usuário**: nome em letras minúsculas (ex. `joao_silva`), grupos extras separados por vírgula, shell (`/usr/sbin/nologin` para quem só usa compartilhamento), senha.
-- **＋ Novo grupo**: ex. `financeiro`.
+- **Novo usuário**: nome em letras minúsculas (ex. `joao_silva`), grupos extras separados por vírgula, shell (`/usr/sbin/nologin` para quem só usa compartilhamento), senha.
+- **Novo grupo**: ex. `financeiro`.
 - **Colocar usuário em grupo**: a pessoa precisa sair e entrar de novo para valer.
 - **Definir senha**: troca a senha de um usuário.
 - **Só pessoas** esconde as contas do sistema.

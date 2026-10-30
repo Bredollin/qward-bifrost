@@ -27,6 +27,18 @@ function el(tag, props = {}, ...kids) {
   return n;
 }
 
+// Ícone do sprite do index.html (ex.: icon('lock')).
+function icon(name, cls = '') {
+  const NS = 'http://www.w3.org/2000/svg';
+  const s = document.createElementNS(NS, 'svg');
+  s.setAttribute('class', ('i ' + cls).trim());
+  s.setAttribute('aria-hidden', 'true');
+  const u = document.createElementNS(NS, 'use');
+  u.setAttribute('href', '#i-' + name);
+  s.append(u);
+  return s;
+}
+
 const state = { info: null, cwd: '/', entries: [], sel: null, users: [], groups: [] };
 
 function status(msg, isErr = false) {
@@ -108,7 +120,6 @@ function enterApp(info) {
   $('#tela-app').hidden = false;
   $('#srv-info').textContent = `${form.host.value} · ${info.distro} · ${info.user}`;
   showElevation(info.elevation);
-  $('#area-permitida').textContent = 'Alterações permitidas em: ' + info.policy.allowedRoots.join(', ');
   const start = info.policy.allowedRoots[0] || '/';
   go(start).catch(() => go('/'));
 }
@@ -122,7 +133,7 @@ function showElevation(method) {
   e.textContent = on ? 'root' : state.info.user;
   e.classList.toggle('root', on);
   const b = $('#btn-elevar');
-  b.textContent = on ? 'Sair do root' : 'Elevar para root';
+  $('.lbl', b).textContent = on ? 'Sair do root' : 'Elevar para root';
   b.classList.toggle('on', on);
   $('#ver-root').disabled = !on;
   if (!on && $('#ver-root').checked) {
@@ -201,6 +212,7 @@ async function go(path) {
     state.sel = null;
     $('#caminho').value = r.path;
     renderFiles();
+    mostrarZona();
     status(`${r.entries.length} itens${r.elevated ? ' · lido como root' : ''}`);
   } catch (e) {
     status(e.message, true);
@@ -220,10 +232,16 @@ function fmtSize(n, type) {
 function renderFiles() {
   const tb = $('#lista');
   tb.replaceChildren();
-  const ico = { pasta: '📁', arquivo: '📄', atalho: '🔗', outro: '◇' };
+  const ico = { pasta: 'folder', arquivo: 'file', atalho: 'link', outro: 'dot' };
+  const roots = state.info.policy.allowedRoots;
   for (const e of state.entries) {
+    const p = join(state.cwd, e.name);
+    // Etiqueta: mostra a porta de entrada da área liberada (ex.: /srv na raiz) e o que é protegido (.ssh).
+    const tag = protegido(p) ? el('span', { class: 'tag protegida', title: 'O Bifrost não altera esta pasta' }, icon('lock'), 'protegida')
+      : roots.includes(p) ? el('span', { class: 'tag liberada', title: 'Área onde as alterações são permitidas' }, icon('check'), 'área liberada')
+      : null;
     const tr = el('tr', { 'data-name': e.name },
-      el('td', { class: 'name' }, el('span', { class: 'ico', text: ico[e.type] }), e.name),
+      el('td', { class: 'name' }, icon(ico[e.type] || 'dot', 'ico ' + e.type), e.name, tag),
       el('td', { class: 'perm', text: e.perms }),
       el('td', { text: e.owner }),
       el('td', { text: e.group }),
@@ -240,7 +258,78 @@ function renderFiles() {
 function select(name) {
   state.sel = name;
   $$('#lista tr').forEach((tr) => tr.classList.toggle('sel', tr.dataset.name === name));
-  $$('[data-need-sel]').forEach((b) => (b.disabled = !name));
+  const alvo = name ? join(state.cwd, name) : null;
+  const pode = alvo && alteravel(alvo);
+  const motivo = !name ? 'Selecione um item na lista' : pode ? '' : protegido(alvo) ? 'Bloqueado: item protegido' : 'Bloqueado: fora da área liberada';
+  $$('[data-need-sel]').forEach((b) => {
+    b.disabled = !pode;
+    b.title = motivo;
+  });
+}
+
+// ---------------- Áreas: sistema, liberada, protegida ----------------
+// A tela antecipa a política para avisar antes do clique; quem decide continua sendo o núcleo (checkWritable),
+// que ainda resolve atalhos no servidor.
+
+const SISTEMA = {
+  '/': 'raiz do Linux: todas as pastas do sistema partem daqui.',
+  '/bin': 'programas básicos do Linux (ls, cp, bash). Mexer aqui quebra comandos do servidor.',
+  '/sbin': 'programas de administração do sistema.',
+  '/boot': 'kernel e arquivos de inicialização. Mexer aqui pode impedir o servidor de ligar.',
+  '/dev': 'discos e dispositivos. Não são arquivos comuns.',
+  '/etc': 'configurações do sistema e dos serviços (rede, usuários, SSH).',
+  '/lib': 'bibliotecas usadas pelos programas.',
+  '/lib32': 'bibliotecas usadas pelos programas.',
+  '/lib64': 'bibliotecas usadas pelos programas.',
+  '/usr': 'programas e bibliotecas instalados.',
+  '/var': 'dados dos serviços: registros, filas e bancos de dados.',
+  '/proc': 'informações do kernel em tempo real (virtual).',
+  '/sys': 'informações do kernel e do hardware (virtual).',
+  '/run': 'dados temporários dos serviços em execução.',
+  '/root': 'pasta pessoal do root.',
+  '/tmp': 'arquivos temporários; o sistema limpa sozinho.',
+  '/snap': 'pacotes snap instalados.',
+  '/lost+found': 'recuperação de disco (fsck).',
+};
+
+const dentro = (p, r) => p !== r && p.startsWith(r === '/' ? '/' : r + '/');
+const protegido = (p) => p.split('/').some((seg) => (state.info.policy.protectedNames || []).includes(seg));
+const alteravel = (p) => state.info.policy.allowedRoots.some((r) => dentro(p, r)) && !protegido(p);
+
+function zona(p) {
+  if (protegido(p)) return 'protegida';
+  if (state.info.policy.allowedRoots.some((r) => p === r || dentro(p, r))) return 'liberada';
+  return 'sistema';
+}
+
+function mostrarZona() {
+  const p = state.cwd, z = zona(p);
+  const box = $('#zona');
+  box.className = 'zona ' + z;
+  box.hidden = false;
+  const atalhos = $('#zona-atalhos');
+  atalhos.replaceChildren();
+  const desc = $('#zona-desc');
+  if (z === 'sistema') {
+    $('#zona-ico').setAttribute('href', '#i-lock');
+    $('#zona-titulo').textContent = 'Pasta do sistema · somente leitura';
+    const base = Object.keys(SISTEMA).filter((k) => k === p || (k !== '/' && p.startsWith(k + '/'))).sort((a, b) => b.length - a.length)[0];
+    desc.replaceChildren(el('code', { text: base || p }), ' ', base ? SISTEMA[base] : 'fora da área liberada.', ' O Bifrost não altera nada aqui, nem como root.');
+    atalhos.append(el('span', { class: 'muted small', text: 'Ir para:' }),
+      ...state.info.policy.allowedRoots.map((r) => el('button', { class: 'btn', type: 'button', text: r, onclick: () => go(r).catch(() => {}) })));
+  } else if (z === 'protegida') {
+    $('#zona-ico').setAttribute('href', '#i-lock');
+    $('#zona-titulo').textContent = 'Pasta protegida · somente leitura';
+    desc.textContent = 'Chaves de acesso SSH (.ssh). O Bifrost não altera nada aqui, para ninguém perder o acesso ao servidor.';
+  } else {
+    $('#zona-ico').setAttribute('href', '#i-check');
+    $('#zona-titulo').textContent = 'Área liberada';
+    desc.textContent = 'Toda alteração mostra o comando, pede confirmação e vai para o registro.';
+  }
+  $$('[data-need-area]').forEach((b) => {
+    b.disabled = z !== 'liberada';
+    b.title = z === 'liberada' ? '' : 'Bloqueado: ' + (z === 'sistema' ? 'pasta do sistema' : 'pasta protegida');
+  });
 }
 const selected = () => state.entries.find((e) => e.name === state.sel);
 
@@ -282,6 +371,7 @@ $('#btn-apagar').addEventListener('click', () => {
   });
   operation({
     title: `Apagar "${s.name}"`,
+    tom: 'alto',
     fields: [
       el('p', { class: 'muted', text: `${join(state.cwd, s.name)} (${s.type}). Apagar não tem volta.` }),
       field(`Digite o nome para confirmar: ${s.name}`, 'confirmName', { required: true, autocomplete: 'off', class: 'mono' }),
@@ -303,6 +393,7 @@ $('#btn-acesso-total').addEventListener('click', async () => {
   await ensureUsersGroups();
   operation({
     title: 'Acesso total',
+    tom: 'alto',
     fields: [
       el('p', { class: 'muted', text: `${join(state.cwd, s.name)} · hoje: ${s.owner}:${s.group}. O usuário vira dono de tudo aí dentro, com ler, gravar e entrar. Não dá sudo nem root.` }),
       pick('Usuário', 'user', pessoas().filter((u) => u !== 'root'), { required: true }),
@@ -522,8 +613,9 @@ const gruposLivres = () => {
 $('#dlg-cancel').addEventListener('click', () => $('#dlg').close());
 
 // Janela genérica. onOk pode lançar erro: a mensagem aparece e a janela continua aberta.
-function dialog({ title, body, okText = 'Continuar', danger = false, onOk }) {
+function dialog({ title, body, okText = 'Continuar', danger = false, tom = '', onOk }) {
   const d = $('#dlg');
+  d.dataset.tom = tom;
   $('#dlg-title').textContent = title;
   $('#dlg-body').replaceChildren(...[].concat(body).filter((n) => n != null));
   const err = $('#dlg-erro');
@@ -565,7 +657,7 @@ function dialog({ title, body, okText = 'Continuar', danger = false, onOk }) {
 }
 
 // Fluxo de toda alteração: formulário -> plano (o que vai acontecer) -> confirmação -> execução -> registro.
-async function operation({ title, fields, op, args, after }) {
+async function operation({ title, fields, op, args, after, tom = '' }) {
   if (state.info.elevation === 'none' && !(await elevate('Esta alteração precisa de root. Eleve a permissão para continuar.'))) {
     status('Cancelado: esta alteração precisa de root.');
     return;
@@ -574,6 +666,7 @@ async function operation({ title, fields, op, args, after }) {
   const filled = await dialog({
     title,
     body: fields,
+    tom,
     onOk: async (f) => {
       a = args(f);
       plan = await api('plan', { op, args: a });
@@ -588,13 +681,15 @@ async function operation({ title, fields, op, args, after }) {
   const confirmed = await dialog({
     title: 'Confirme a alteração',
     body: [
-      el('span', { class: 'risk ' + plan.risk, text: { baixo: 'Risco baixo', medio: 'Risco médio', alto: 'Risco alto' }[plan.risk] }),
-      el('p', { text: plan.summary }),
+      el('span', { class: 'risk ' + plan.risk }, icon({ baixo: 'check', medio: 'alert', alto: 'alert' }[plan.risk]),
+        { baixo: 'Risco baixo', medio: 'Risco médio', alto: 'Risco alto' }[plan.risk]),
+      el('p', { class: 'resumo', text: plan.summary }),
       el('details', {}, el('summary', { text: 'Ver o comando que será executado' }), el('div', { class: 'confirm-cmd', text: plan.command })),
       high ? el('label', { class: 'check danger' }, el('input', { type: 'checkbox', name: 'entendo', required: true }), 'Conferi e quero fazer isso') : null,
     ],
     okText: 'Fazer agora',
     danger: high,
+    tom: plan.risk,
     onOk: async () => {
       await api('execute', { op, args: a });
       return true;

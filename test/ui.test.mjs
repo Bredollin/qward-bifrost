@@ -105,17 +105,30 @@ try {
   await ok();
   await w.waitForFunction(() => document.querySelector('tr[data-name="financeiro"] td.perm')?.textContent === 'drwxrws---');
 
-  // Trava: fora da área permitida.
+  // Área liberada: aviso verde e botões de criar ativos.
+  assert.match(await w.getAttribute('#zona', 'class'), /liberada/);
+  assert.equal(await w.isDisabled('#btn-nova-pasta'), false);
+
+  // Trava: pasta do sistema avisa antes do clique e desliga os botões de alteração.
   await w.fill('#caminho', '/etc');
   await w.press('#caminho', 'Enter');
-  await w.waitForFunction(() => document.querySelector('#caminho').value === '/etc');
-  await w.click('#btn-nova-pasta');
-  await w.fill('#dlg [name=nome]', 'nao-pode');
-  await ok();
-  await w.waitForSelector('#dlg-erro:not([hidden])');
-  assert.match(await w.textContent('#dlg-erro'), /fora das pastas permitidas/);
+  await w.waitForSelector('#zona.sistema');
+  assert.match(await w.textContent('#zona'), /somente leitura/);
+  assert.equal(await w.isDisabled('#btn-nova-pasta'), true);
+  assert.equal(await w.isDisabled('#btn-novo-arquivo'), true);
+  await w.click('#lista tr:first-child td.name');
+  assert.equal(await w.isDisabled('#btn-permissoes'), true);
+  assert.equal(await w.isDisabled('#btn-apagar'), true);
   await shot('05-bloqueio-etc');
-  await w.click('#dlg-cancel');
+
+  // Raiz: aviso do sistema, /srv marcada como área liberada e atalho "Ir para".
+  await w.fill('#caminho', '/');
+  await w.press('#caminho', 'Enter');
+  await w.waitForSelector('tr[data-name="srv"] .tag.liberada');
+  assert.match(await w.textContent('#zona'), /raiz do Linux/);
+  await shot('05b-raiz');
+  await w.click('#zona-atalhos button:text-is("/srv")');
+  await w.waitForFunction(() => document.querySelector('#caminho').value === '/srv');
 
   // Grupo e usuário.
   await w.click('[data-tab=usuarios]');

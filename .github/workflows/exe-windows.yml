@@ -1,4 +1,4 @@
-# Gera o QwardBifrost-<versão>-portable.exe no Windows.
+# Gera o QwardBifrost.exe (portátil) no Windows.
 # - Todo push no main (e o botão "Run workflow"): o .exe fica em Actions > execução > Artifacts.
 # - Tag v* (ex.: v0.1.0): cria uma Release com o .exe anexado.
 name: exe-windows
