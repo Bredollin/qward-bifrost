@@ -40,7 +40,11 @@ Abre o app de verdade (Electron + Playwright), conecta no servidor de teste e fa
 npm run test:ui -- capturas    # Linux sem tela: xvfb-run -a npm run test:ui -- capturas
 ```
 
-Cobre: confirmar servidor, criar pasta, entrar, criar com permissão, nome malicioso como texto, grade de permissões (2770), bloqueio em `/etc`, grupo, usuário com senha, dono e grupo, novo arquivo, apagar arquivo (nome errado recusado), acesso total, apagar pasta recursiva, registro sem senha.
+Cobre: confirmar servidor, criar pasta, entrar, criar com permissão, nome malicioso como texto, grade de permissões (2770), faixa de área (liberada, sistema em `/etc` com botões desligados, raiz com etiqueta "área liberada" e atalho "Ir para"), grupo, usuário com senha, dono e grupo, novo arquivo, apagar arquivo (nome errado recusado), acesso total, apagar pasta recursiva, registro sem senha.
+
+## Resultado em 2026-10-30 (0.3.0, interface nova)
+
+- `npm test`: 5/5 ✅ (Ubuntu 24.04). `test:ui`: ✅, 17 capturas conferidas.
 
 ## Resultado em 2026-10-29
 

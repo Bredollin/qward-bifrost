@@ -4,6 +4,22 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Versões: 
 
 ## [Não lançado]
 
+## [0.3.0] - 2026-10-30
+
+### Alterado
+- Interface redesenhada (só a tela; núcleo, comandos e travas não mudaram):
+  - Botões com ícones e hierarquia de cor: verde cheio cria, contorno muda o item, vermelho apaga, laranja eleva. Altura única (34 px) e grupos separados (Criar | Item selecionado | Apagar).
+  - Faixa de área acima dos botões: **Pasta do sistema · somente leitura** (laranja) em `/`, `/bin`, `/etc` etc., com a função da pasta e atalhos "Ir para" as áreas liberadas; **Pasta protegida** (vermelha) em `.ssh`; **Área liberada** (verde) no resto.
+  - Fora da área liberada, os botões de alteração ficam desligados antes do clique, com o motivo na dica. O núcleo continua decidindo (`checkWritable`).
+  - Na raiz, as pastas liberadas levam a etiqueta **área liberada**; `.ssh` leva **protegida**.
+  - Janela de confirmação com faixa da cor do risco, selo com ícone e resumo em destaque; Apagar e Acesso total abrem já em vermelho.
+  - Login: Senha/Chave SSH como alternância, ícone novo e as três garantias (senha só na memória, nada instalado, tudo registrado).
+  - Ícones de arquivo, pasta e atalho em SVG (antes emoji); "Ver como root" e "Só pessoas" viraram interruptores.
+- Ícone novo do app (ponte em arco nas cores da Qward com o losango no topo); fonte em `build/icon.svg`.
+- O .exe agora se chama só `QwardBifrost.exe`.
+- `playwright` entrou nas devDependencies (o `test:ui` funciona depois de `npm ci`).
+- Teste de interface cobre a faixa de área, botões desligados em `/etc` e o atalho "Ir para" na raiz.
+
 ## [0.2.0] - 2026-10-29
 
 ### Adicionado

@@ -15,7 +15,7 @@ O Bifrost cria usuários e muda permissões com poder de root. Estas são as tra
   - Caminho: absoluto, normalizado, sem NUL nem quebra de linha.
 - `--` antes dos caminhos para nenhum nome virar opção.
 - `mv` checa antes se o destino existe (não sobrescreve).
-- Sem operação de apagar (decisão consciente na 0.1.0).
+- Apagar (desde a 0.2.0) exige o nome digitado, conferido também no núcleo; recursivo exige ainda digitar `entendo` (ver seção 3).
 
 ## 3. Política de pastas (`politica.json`)
 
@@ -36,7 +36,7 @@ O Bifrost cria usuários e muda permissões com poder de root. Estas são as tra
 - **Apagar** e **Acesso total** recursivos são bloqueados se houver `.ssh` ou um disco montado dentro da pasta (`/proc/mounts`). Apagar um atalho apaga só o atalho, nunca o destino.
 - **Acesso total** não dá sudo nem root: o usuário vira dono só da pasta escolhida dentro da área permitida.
 - **setuid** (permissão `4xxx`) é bloqueado; setgid (`2xxx`) e sticky (`1xxx`) são liberados.
-- Ler/navegar é livre (inclusive `/etc`), alterar não.
+- Ler/navegar é livre (inclusive `/etc`), alterar não. A tela avisa antes do clique (faixa **Pasta do sistema · somente leitura** e botões desligados fora da área), mas quem decide é o núcleo: a tela não resolve atalhos e nunca libera nada sozinha.
 - Chave SSH só é lida se o técnico a escolheu pelo diálogo do Windows.
 - A impressão digital confirmada só é gravada depois que a conexão funciona.
 - Quem ajusta a política é o administrador, editando o arquivo no PC do técnico. Ver [pendências](pendencias.md) para centralizar.

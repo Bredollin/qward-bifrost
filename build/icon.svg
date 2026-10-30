@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Ícone do Qward Bifrost: a ponte do arco-íris (três arcos nas cores da Qward) com o losango da Qward no topo. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#11503f"/>
+      <stop offset="1" stop-color="#071d19"/>
+    </linearGradient>
+    <linearGradient id="laranja" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#cc6349"/>
+      <stop offset="1" stop-color="#f9a025"/>
+    </linearGradient>
+    <linearGradient id="losango" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7ee07f"/>
+      <stop offset=".5" stop-color="#00c966"/>
+      <stop offset="1" stop-color="#0e6b3a"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bg)"/>
+  <rect x="17.5" y="17.5" width="477" height="477" rx="106.5" fill="none" stroke="#2f7a5c" stroke-width="3" opacity=".7"/>
+  <g transform="translate(0 -32)">
+  <g fill="none" stroke-linecap="round" stroke-width="30">
+    <path d="M60 392a196 150 0 0 1 392 0" stroke="url(#laranja)"/>
+    <path d="M104 392a152 108 0 0 1 304 0" stroke="#54c655"/>
+    <path d="M148 392a108 66 0 0 1 216 0" stroke="#00c966"/>
+  </g>
+  <g transform="translate(256 242) rotate(45)">
+    <rect x="-50" y="-50" width="100" height="100" rx="18" fill="url(#losango)" stroke="#0a2420" stroke-width="12"/>
+    <rect x="-19" y="-19" width="38" height="38" rx="6" fill="#0a2420"/>
+  </g>
+  </g>
+</svg>
