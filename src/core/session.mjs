@@ -2,6 +2,9 @@
 // Nada é instalado no servidor: só usamos SSH e comandos que já existem em qualquer Linux.
 import { Client } from 'ssh2';
 import { createHash } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { q } from './validate.mjs';
 
 export function fingerprint(keyBuf) {
@@ -148,6 +151,51 @@ export class Session {
     const out = all.slice(i + MARK.length + 1);
     // Com pty, stdout e stderr chegam juntos.
     return { code: r.code, stdout: out, stderr: r.code === 0 ? '' : out };
+  }
+
+  // Envia um arquivo local para `remote` com o usuário conectado (nunca como root).
+  // Usa SFTP (já vem com o OpenSSH). Se o servidor não tiver SFTP (ex.: Dropbear sem sftp-server),
+  // manda pelo próprio SSH com `cat`. onBytes(n) a cada pedaço; signal (AbortSignal) cancela.
+  async upload(localPath, remote, { onBytes, signal } = {}) {
+    if (!this.client) throw new Error('Não conectado.');
+    const counter = new Transform({
+      transform(chunk, _e, cb) {
+        onBytes?.(chunk.length);
+        cb(null, chunk);
+      },
+    });
+    let sftp = null;
+    try {
+      sftp = await new Promise((res, rej) => this.client.sftp((e, s) => (e ? rej(e) : res(s))));
+    } catch {
+      sftp = null;
+    }
+    if (sftp) {
+      try {
+        await pipeline(createReadStream(localPath), counter, sftp.createWriteStream(remote, { mode: 0o600 }), { signal });
+      } finally {
+        sftp.end();
+      }
+      return 'sftp';
+    }
+    const ch = await new Promise((res, rej) =>
+      this.client.exec(`umask 077; cat > ${q(remote)}`, (e, st) => (e ? rej(e) : res(st))));
+    let code = null, stderr = '';
+    const closed = new Promise((res) => {
+      ch.on('exit', (c) => (code = c));
+      ch.stderr.on('data', (d) => (stderr += d));
+      ch.on('close', res);
+    });
+    ch.resume();
+    try {
+      await pipeline(createReadStream(localPath), counter, ch, { signal, end: true });
+    } catch (e) {
+      ch.close();
+      throw e;
+    }
+    await closed;
+    if (code !== 0) throw new Error(`Falha no envio: ${stderr.trim() || 'código ' + code}`);
+    return 'ssh';
   }
 
   // Confere se a elevação funciona (id -u precisa dar 0).

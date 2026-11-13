@@ -359,6 +359,163 @@ $('#btn-novo-arquivo').addEventListener('click', () =>
   })
 );
 
+// ---------------- Envio de arquivos (PC -> servidor) ----------------
+
+$('#btn-enviar').addEventListener('click', async () => {
+  try {
+    const files = await api('pickUpload');
+    if (files.length) await enviar(files);
+  } catch (e) {
+    status(e.message, true);
+  }
+});
+
+// Arrastar do Windows para a lista: só na área liberada.
+{
+  const area = $('#area-arquivos'), aviso = $('#soltar');
+  let depth = 0;
+  const temArquivo = (ev) => [...(ev.dataTransfer?.types || [])].includes('Files');
+  const pode = () => state.info && zona(state.cwd) === 'liberada';
+  area.addEventListener('dragenter', (ev) => {
+    if (!temArquivo(ev)) return;
+    ev.preventDefault();
+    depth++;
+    $('#soltar-dest').textContent = pode() ? state.cwd : 'Bloqueado: fora da área liberada';
+    aviso.hidden = false;
+  });
+  area.addEventListener('dragover', (ev) => {
+    if (!temArquivo(ev)) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = pode() ? 'copy' : 'none';
+  });
+  area.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; aviso.hidden = true; } });
+  area.addEventListener('drop', async (ev) => {
+    ev.preventDefault();
+    depth = 0;
+    aviso.hidden = true;
+    if (!pode()) return status('Bloqueado: envio só na área liberada.', true);
+    try {
+      const r = await window.bifrost.dropFiles(ev.dataTransfer.files);
+      if (!r.ok) throw new Error(r.erro);
+      const files = r.data;
+      if (files.length) await enviar(files);
+    } catch (e) {
+      status(e.message, true);
+    }
+  });
+  // Soltar fora da lista não abre o arquivo na janela.
+  document.addEventListener('dragover', (ev) => ev.preventDefault());
+  document.addEventListener('drop', (ev) => ev.preventDefault());
+}
+
+// Fluxo: escolher opções -> (perguntar sobre repetidos) -> confirmar o plano -> enviar com progresso -> registro.
+async function enviar(files) {
+  if (state.info.elevation === 'none' && !(await elevate('Enviar arquivos para o servidor precisa de root. Eleve a permissão para continuar.'))) {
+    return status('Cancelado: o envio precisa de root.');
+  }
+  const dir = state.cwd;
+  const existentes = new Set(state.entries.map((e) => e.name));
+  const total = files.reduce((t, f) => t + f.size, 0);
+  const radio = (name, value, text, checked = false) => el('label', {}, el('input', { type: 'radio', name, value, checked }), text);
+  let conflict, owner;
+  const ok1 = await dialog({
+    title: 'Enviar arquivos',
+    body: [
+      el('p', { class: 'muted small', text: `Arquivos escolhidos (${files.length} · ${fmtSize(total)})` }),
+      el('div', { class: 'envio-lista mono' }, files.map((f) => el('div', { class: existentes.has(f.name) ? 'existe' : '' },
+        el('span', { text: f.name + (existentes.has(f.name) ? '  (já existe)' : '') }), el('span', { text: fmtSize(f.size) })))),
+      el('p', { class: 'muted small', text: 'Destino' }),
+      el('div', { class: 'confirm-cmd', text: dir }),
+      el('p', { class: 'muted small', text: 'Se já existir um arquivo com o mesmo nome' }),
+      el('div', { class: 'opcoes' }, radio('conflict', 'ask', 'Perguntar', true), radio('conflict', 'replace', 'Substituir'), radio('conflict', 'skip', 'Pular')),
+      el('p', { class: 'muted small', text: 'Dono dos arquivos enviados' }),
+      el('div', { class: 'opcoes' }, radio('owner', 'pasta', 'Igual ao da pasta (dono, grupo e permissão)', true), radio('owner', 'conectado', `Usuário conectado (${state.info.user})`)),
+    ],
+    okText: 'Continuar',
+    onOk: (f) => { conflict = f.conflict.value; owner = f.owner.value; return true; },
+  });
+  if (!ok1) return;
+
+  const repetidos = files.filter((f) => existentes.has(f.name));
+  if (conflict === 'ask' && repetidos.length) {
+    let r;
+    const ok2 = await dialog({
+      title: 'Arquivos que já existem',
+      tom: 'alto',
+      body: [
+        el('p', { class: 'resumo', text: `${repetidos.length} ${repetidos.length === 1 ? 'arquivo já existe' : 'arquivos já existem'} em ${dir}:` }),
+        el('div', { class: 'envio-lista mono' }, repetidos.map((f) => el('div', { text: f.name }))),
+        el('div', { class: 'opcoes' }, radio('r', 'skip', 'Pular estes (manter os do servidor)', true), radio('r', 'replace', 'Substituir pelos do computador')),
+      ],
+      okText: 'Continuar',
+      onOk: (f) => { r = f.r.value; return true; },
+    });
+    if (!ok2) return;
+    conflict = r;
+  } else if (conflict === 'ask') conflict = 'skip';
+
+  // Plano de cada arquivo (o núcleo confere área liberada, nome e se já existe).
+  const planos = [];
+  const enviados = conflict === 'skip' ? files.filter((f) => !existentes.has(f.name)) : files;
+  if (!enviados.length) return status('Nada a enviar: todos os arquivos já existem no servidor.');
+  try {
+    for (const f of enviados) planos.push(await api('plan', { op: 'upload', args: { dir, name: f.name, size: f.size, owner, replace: conflict === 'replace' } }));
+  } catch (e) {
+    return status(e.message, true);
+  }
+  const alto = planos.some((p) => p.risk === 'alto');
+  const ok3 = await dialog({
+    title: 'Confirme o envio',
+    tom: alto ? 'alto' : 'baixo',
+    body: [
+      el('span', { class: 'risk ' + (alto ? 'alto' : 'baixo') }, icon(alto ? 'alert' : 'check'), alto ? 'Risco alto: substitui arquivos' : 'Risco baixo'),
+      ...planos.map((p) => el('p', { class: 'resumo', text: p.summary })),
+      el('details', {}, el('summary', { text: 'Ver os comandos que serão executados' }),
+        el('p', { class: 'muted small', text: 'Cada arquivo vai por SFTP (como o usuário conectado) para a pasta temporária ~/.bifrost-envio; depois, como root:' }),
+        planos.map((p) => el('div', { class: 'confirm-cmd', text: p.command }))),
+      alto ? el('label', { class: 'check danger' }, el('input', { type: 'checkbox', name: 'entendo', required: true }), 'Conferi e quero substituir') : null,
+    ],
+    okText: 'Enviar',
+    danger: alto,
+  });
+  if (!ok3) return;
+
+  // Progresso: a janela fica aberta; Cancelar interrompe o envio.
+  const barra = el('i');
+  const linha = el('p', { class: 'muted small', text: 'Preparando…' });
+  const okBtn = $('#dlg-ok');
+  let fim = false;
+  const janela = dialog({ title: 'Enviando arquivos', body: [el('div', { class: 'prog' }, barra), linha], okText: 'Fechar' });
+  okBtn.disabled = true;
+  janela.then(() => { if (!fim) api('uploadCancel').catch(() => {}); });
+  const t0 = Date.now();
+  const off = window.bifrost.onUploadProgress((p) => {
+    barra.style.width = (p.total ? Math.min(100, (p.sentAll / p.total) * 100) : 100).toFixed(1) + '%';
+    const vel = p.sentAll / Math.max(0.5, (Date.now() - t0) / 1000);
+    linha.textContent = `Como root · ${p.index + 1}/${p.count} · ${p.name} · ${p.size ? Math.floor((p.sent / p.size) * 100) : 100}% · ${fmtSize(vel)}/s`;
+  });
+  try {
+    const r = await api('upload', { dir, files: enviados, conflict, owner });
+    const n = (s) => r.filter((x) => x.status === s).length;
+    const msg = `Envio como root: ${n('enviado')} enviado(s)` + (n('pulado') ? `, ${n('pulado')} pulado(s)` : '') + (n('cancelado') ? `, ${n('cancelado')} cancelado(s)` : '') + ` para ${dir}`;
+    barra.style.width = '100%';
+    linha.textContent = msg;
+    status(msg, n('cancelado') > 0);
+  } catch (e) {
+    linha.textContent = e.message;
+    linha.className = 'erro';
+    status(e.message, true);
+  } finally {
+    fim = true;
+    off();
+    okBtn.disabled = false;
+    $('#dlg-cancel').hidden = true;
+    await janela;
+    $('#dlg-cancel').hidden = false;
+    go(state.cwd).catch(() => {});
+  }
+}
+
 $('#btn-apagar').addEventListener('click', () => {
   const s = selected();
   const pasta = s.type === 'pasta';

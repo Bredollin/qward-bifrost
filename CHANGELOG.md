@@ -4,6 +4,17 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Versões: 
 
 ## [Não lançado]
 
+## [0.4.0] - 2026-11-13
+
+### Adicionado
+- **Enviar arquivos** do computador para a pasta aberta no servidor (botão novo ou arrastar os arquivos do Windows para a lista). Só arquivos; pastas inteiras ficam para depois.
+  - Vai por **SFTP** na mesma conexão SSH (sem porta nova, sem instalar nada). Servidor sem SFTP (ex.: Dropbear): manda pelo próprio SSH com `cat`.
+  - Chega primeiro em `~/.bifrost-envio` do usuário conectado; depois o root move para o destino e acerta dono e permissão. Nada fica pela metade no destino, nem ao cancelar.
+  - Dono: **igual ao da pasta** (dono, grupo e permissão sem "executar", ex.: pasta 2770 → arquivo 660) ou **usuário conectado** (mesma permissão da pasta). No RHEL/Rocky com SELinux roda `restorecon` no arquivo.
+  - Nome repetido: Perguntar, Substituir ou Pular. Substituir é risco alto e pede "Conferi e quero substituir"; pasta ou atalho com o mesmo nome nunca são substituídos.
+  - Barra de progresso com velocidade e Cancelar; cada arquivo vai para o Registro (tamanho, destino, SFTP ou SSH).
+  - Só na área liberada, como os outros botões.
+
 ## [0.3.0] - 2026-10-30
 
 ### Alterado

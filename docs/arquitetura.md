@@ -18,7 +18,7 @@ flowchart LR
 | Arquivo | Papel |
 |---|---|
 | `src/main.mjs` | Electron: cria a janela, guarda a sessão, carrega `politica.json`, responde à tela via IPC |
-| `src/preload.cjs` | ponte mínima: expõe só `window.bifrost.call(nome, args)` com lista fechada de nomes |
+| `src/preload.cjs` | ponte mínima: expõe só `window.bifrost.call(nome, args)` com lista fechada de nomes, o caminho de arquivo arrastado (`pathFor`) e o progresso do envio |
 | `src/ui/` | tela; dado do servidor entra só por `textContent` (nunca `innerHTML`) |
 | `src/core/session.mjs` | conexão (senha, chave, keyboard-interactive), verificação da chave do servidor, `run()` com elevação `sudo -S` ou `su` em pty |
 | `src/core/ops.mjs` | cada operação tem `plan()` (resumo + comando + risco) e `execute()` (roda e registra) |
@@ -50,3 +50,7 @@ Em `%APPDATA%\Qward Bifrost\`:
 | `registro-de-acoes.jsonl` | registro de ações (sem senhas) |
 
 `BIFROST_DATA_DIR` troca essa pasta (usado nos testes).
+
+## Envio de arquivos (0.4.0)
+
+`pickUpload` (diálogo do Windows) ou `dropUpload` (arrastar) registram os caminhos aceitos; `upload` só envia caminhos registrados. `Ops.uploadFiles` faz, por arquivo: `plan('upload')` (área liberada, nome, já existe) → `Session.upload` (SFTP ou `cat`, como usuário comum, para `~/.bifrost-envio/<uuid>`) → comando do plano como root (`mv` + dono/permissão) → registro. `uploadCancel` aborta e apaga o temporário.
