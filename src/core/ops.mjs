@@ -1,6 +1,7 @@
 // Operações de arquivo, permissão, usuário e grupo. Cada operação tem duas fases:
 // plan() mostra exatamente o que será feito (para a tela de confirmação) e execute() faz.
 // Os comandos usados existem em Debian/Ubuntu, RHEL/Rocky/Alma, SUSE e Alpine (BusyBox).
+import { randomUUID } from 'node:crypto';
 import { q, cleanPath, cleanName, cleanMode, cleanShell, checkWritable, checkGroup, DEFAULT_POLICY } from './validate.mjs';
 
 const SEP = '\t';
@@ -149,6 +150,27 @@ export class Ops {
         return mk(op, `Dar acesso total a ${user} em ${path} e TUDO dentro dela (vira dono, com ler, gravar e entrar)`,
           `chown -R ${q(user)} -- ${q(path)} && chmod -R u+rwX -- ${q(path)}`, 'alto');
       }
+      case 'upload': {
+        // Arquivo do PC do técnico para o servidor. Chega numa pasta temporária do usuário conectado
+        // (ver uploadFiles) e este comando, como root, põe no destino e acerta dono e permissão.
+        const name = cleanFileName(a.name);
+        const dir = await this.realpath(a.dir);
+        const path = checkWritable((dir === '/' ? '' : dir) + '/' + name, this.policy);
+        const tmp = a.tmp ? cleanStage(a.tmp) : '<pasta temporária do usuário>/' + name;
+        const asDir = a.owner !== 'conectado';
+        const exists = await this.s.run(`[ -e ${q(path)} ] || [ -L ${q(path)} ]`, { elevated: this.canElevate });
+        const replace = exists.code === 0;
+        if (replace && !a.replace) throw Object.assign(new Error(`Já existe: ${path}`), { code: 'EXISTS' });
+        if (replace && (await this.kind(path)) === 'pasta') throw new Error(`Já existe uma PASTA com esse nome: ${path}`);
+        // Permissão do arquivo = a da pasta sem o "executar" (ex.: pasta 2770 -> arquivo 660).
+        const fix = asDir
+          ? ` && chown "$(stat -c %u:%g -- ${q(dir)})" -- ${q(path)} && chmod "$(printf %o $((0$(stat -c %a -- ${q(dir)}) & 0666)))" -- ${q(path)}`
+          : ` && chmod 644 -- ${q(path)}`;
+        const cmd = `${replace ? '' : notExists(path)}mv -f -- ${q(tmp)} ${q(path)}${fix}`;
+        return mk(op, `${replace ? 'SUBSTITUIR' : 'Enviar'} ${path} (${fmtBytes(a.size)})` +
+          `${asDir ? ', com dono e permissão iguais aos da pasta' : ', dono = usuário conectado'}${replace ? '. O arquivo antigo some, não tem volta.' : ''}`,
+          cmd, replace ? 'alto' : 'baixo');
+      }
       case 'move': {
         const from = checkWritable(await this.realpath(a.from, { mustExist: false }), this.policy);
         const to = checkWritable(await this.realpath(a.to, { mustExist: false }), this.policy);
@@ -210,6 +232,66 @@ export class Ops {
     }
   }
 
+  // Envia arquivos do PC para a pasta `dir`. files: [{ local, name, size }].
+  // conflict: 'replace' | 'skip' (a tela pergunta antes quando o técnico escolhe "Perguntar").
+  // Etapas por arquivo: plano (valida) -> SFTP como usuário conectado para ~/.bifrost-envio -> root move e acerta dono.
+  async uploadFiles({ dir, files, conflict = 'skip', owner = 'pasta' }, { onProgress, signal } = {}) {
+    if (!Array.isArray(files) || !files.length) throw new Error('Nenhum arquivo escolhido.');
+    const st = await this.s.run('d="$HOME/.bifrost-envio"; mkdir -p "$d" && chmod 700 "$d" && cd "$d" && pwd -P');
+    const stage = st.stdout.trim().split('\n').pop();
+    if (st.code !== 0 || !stage?.startsWith('/')) throw new Error('Não foi possível criar a pasta temporária do envio no servidor (pasta pessoal do usuário).');
+    const total = files.reduce((t, f) => t + (Number(f.size) || 0), 0);
+    let sentAll = 0;
+    const result = [];
+    for (const [i, f] of files.entries()) {
+      if (signal?.aborted) break;
+      const args = { dir, name: f.name, size: f.size, owner, replace: conflict === 'replace' };
+      let p;
+      try {
+        p = await this.plan('upload', args);
+      } catch (e) {
+        if (e.code === 'EXISTS') {
+          result.push({ name: f.name, status: 'pulado', motivo: 'já existe' });
+          sentAll += Number(f.size) || 0;
+          continue;
+        }
+        throw e;
+      }
+      const tmp = `${stage}/${randomUUID()}`;
+      const started = Date.now();
+      let ok = false, error = null, sent = 0, via = null;
+      try {
+        via = await this.s.upload(f.local, tmp, {
+          signal,
+          onBytes: (n) => {
+            sent += n;
+            onProgress?.({ index: i, count: files.length, name: f.name, sent, size: f.size, sentAll: sentAll + sent, total });
+          },
+        });
+        p = await this.plan('upload', { ...args, tmp });
+        const r = await this.s.run(p.command, { elevated: this.canElevate });
+        if (r.code !== 0) throw new Error(firstLine(r.stderr) || `Falhou (código ${r.code}).`);
+        ok = true;
+        result.push({ name: f.name, status: 'enviado' });
+      } catch (e) {
+        error = signal?.aborted ? 'Cancelado pelo técnico.' : e.message;
+        await this.s.run(`rm -f -- ${q(tmp)}`).catch(() => {});
+        if (signal?.aborted) {
+          result.push({ name: f.name, status: 'cancelado' });
+        } else throw new Error(`${f.name}: ${e.message}`);
+      } finally {
+        sentAll += Number(f.size) || 0;
+        await this.audit?.write({
+          tecnico: this.tecnico, host: this.host, op: 'upload', summary: p.summary, command: p.command,
+          elevated: this.canElevate, ok, error, ms: Date.now() - started, bytes: sent, via,
+        });
+      }
+    }
+    await this.s.run(`rmdir -- ${q(stage)} 2>/dev/null; true`).catch(() => {});
+    for (const f of files.slice(result.length)) result.push({ name: f.name, status: 'cancelado' });
+    return result;
+  }
+
   async execute(op, a) {
     const p = await this.plan(op, a);
     const started = Date.now();
@@ -229,6 +311,30 @@ export class Ops {
       });
     }
   }
+}
+
+// Nome que vem do Windows: só o nome, sem pasta, sem "." ou "..".
+function cleanFileName(n) {
+  if (typeof n !== 'string' || !n || n === '.' || n === '..' || /[/\0\n\r]/.test(n) || n.length > 255) {
+    throw new Error(`Nome de arquivo inválido: ${n}`);
+  }
+  return n;
+}
+
+// Arquivo temporário do envio: sempre dentro de uma pasta .bifrost-envio.
+function cleanStage(p) {
+  const c = cleanPath(p);
+  if (!/\/\.bifrost-envio\/[0-9a-f-]{36}$/.test(c)) throw new Error('Arquivo temporário inválido.');
+  return c;
+}
+
+function fmtBytes(n) {
+  n = Number(n) || 0;
+  if (n < 1024) return n + ' B';
+  const u = ['KB', 'MB', 'GB', 'TB'];
+  let i = -1;
+  do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
+  return n.toFixed(n < 10 ? 1 : 0).replace('.', ',') + ' ' + u[i];
 }
 
 function mk(op, summary, command, risk) {

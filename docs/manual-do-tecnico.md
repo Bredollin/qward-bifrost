@@ -74,6 +74,9 @@ Selecione → **Dono e grupo** → escolha da lista → Continuar → confira.
 ### Criar arquivo vazio
 **Novo arquivo** → nome → (opcional) permissão, ex. `660` → Continuar → confira. Se já existir, nada é sobrescrito.
 
+### Enviar arquivos do computador
+Abra a pasta de destino → **Enviar arquivos** (ou arraste os arquivos do Windows para a lista) → escolha o que fazer se o nome já existir (Perguntar, Substituir, Pular) e quem fica de dono (**igual ao da pasta**, o normal em pasta compartilhada, ou o usuário conectado) → Continuar → confira → Enviar. A barra mostra o progresso; **Cancelar** interrompe sem deixar arquivo pela metade. Só arquivos (pasta inteira ainda não).
+
 ### Acesso total
 Selecione a pasta → **Acesso total** → escolha o usuário → confira. Ele vira dono da pasta e de tudo dentro, com ler, gravar e entrar. Não vira administrador do servidor (sem sudo, sem root).
 

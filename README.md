@@ -8,7 +8,7 @@
 
 <p align="center">
   Gerência de servidores Linux por SSH, com interface gráfica, para os técnicos da Qward.<br>
-  Versão <strong>0.3.0</strong> · Windows · portátil (não precisa instalar)
+  Versão <strong>0.4.0</strong> · Windows · portátil (não precisa instalar)
 </p>
 
 ---

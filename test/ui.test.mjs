@@ -1,7 +1,7 @@
 // Teste de ponta a ponta da interface (Electron + Playwright) contra o servidor SSH de teste.
 // Uso: BIFROST_TEST_HOST=... BIFROST_TEST_PORT=... BIFROST_TEST_USER=... BIFROST_TEST_PASS=... node test/ui.test.mjs [pasta-das-capturas]
 import { createRequire } from 'node:module';
-import { mkdtemp, mkdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
@@ -105,6 +105,43 @@ try {
   await ok();
   await w.waitForFunction(() => document.querySelector('tr[data-name="financeiro"] td.perm')?.textContent === 'drwxrws---');
 
+  // Enviar arquivos: o diálogo do Windows é simulado no processo principal (Playwright não clica nele).
+  const locais = join(dataDir, 'envio');
+  await mkdir(locais, { recursive: true });
+  await writeFile(join(locais, 'planilha.xlsx'), Buffer.alloc(300 * 1024, 7));
+  await writeFile(join(locais, 'relatorio.pdf'), Buffer.alloc(5 * 1024 * 1024, 3));
+  const escolher = (paths) => app.evaluate(({ dialog }, p) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: p }); }, paths);
+  await escolher([join(locais, 'planilha.xlsx'), join(locais, 'relatorio.pdf')]);
+  assert.equal(await w.isDisabled('#btn-enviar'), false);
+  await w.click('#btn-enviar');
+  await w.waitForSelector('#dlg .envio-lista');
+  await shot('15-enviar-arquivos');
+  await ok();
+  await w.waitForSelector('.risk.baixo');
+  await shot('16-confirmar-envio');
+  await ok();
+  await w.waitForFunction(() => /2 enviado/.test(document.querySelector('#dlg-body')?.textContent || ''));
+  await shot('17-envio-concluido');
+  await ok();
+  await w.waitForSelector('tr[data-name="relatorio.pdf"]');
+  assert.equal(await w.textContent('tr[data-name="relatorio.pdf"] td.num'), '5.0 MB');
+  // Mesmo nome de novo com "Perguntar": a tela avisa e o técnico escolhe substituir.
+  await escolher([join(locais, 'planilha.xlsx')]);
+  await w.click('#btn-enviar');
+  await w.waitForSelector('#dlg .envio-lista .existe');
+  await ok();
+  await w.waitForSelector('#dlg [name=r]');
+  await shot('18-arquivo-ja-existe');
+  await w.check('#dlg [name=r][value=replace]');
+  await ok();
+  await w.waitForSelector('.risk.alto');
+  assert.match(await w.textContent('#dlg-body'), /SUBSTITUIR/);
+  await shot('19-confirmar-substituir');
+  await w.check('#dlg [name=entendo]');
+  await ok();
+  await w.waitForFunction(() => /1 enviado/.test(document.querySelector('#dlg-body')?.textContent || ''));
+  await ok();
+
   // Área liberada: aviso verde e botões de criar ativos.
   assert.match(await w.getAttribute('#zona', 'class'), /liberada/);
   assert.equal(await w.isDisabled('#btn-nova-pasta'), false);
@@ -116,6 +153,7 @@ try {
   assert.match(await w.textContent('#zona'), /somente leitura/);
   assert.equal(await w.isDisabled('#btn-nova-pasta'), true);
   assert.equal(await w.isDisabled('#btn-novo-arquivo'), true);
+  assert.equal(await w.isDisabled('#btn-enviar'), true);
   await w.click('#lista tr:first-child td.name');
   assert.equal(await w.isDisabled('#btn-permissoes'), true);
   assert.equal(await w.isDisabled('#btn-apagar'), true);

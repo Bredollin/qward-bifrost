@@ -1,8 +1,8 @@
 // Processo principal do Electron: guarda a sessão SSH e expõe operações para a tela via IPC.
 // A tela (renderer) nunca toca em SSH, arquivos locais ou senhas guardadas: só pede operações.
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
+import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Session } from './core/session.mjs';
 import { Ops } from './core/ops.mjs';
@@ -17,6 +17,8 @@ const data = () => app.getPath('userData');
 let session = null;
 let ops = null;
 const pickedKeys = new Set(); // só lemos chaves escolhidas pelo diálogo do Windows
+const pickedFiles = new Set(); // só enviamos arquivos escolhidos no diálogo ou arrastados para a janela
+let uploading = null; // AbortController do envio em andamento
 const audit = () => new Audit(join(data(), 'registro-de-acoes.jsonl'));
 const known = () => new KnownHosts(join(data(), 'servidores-conhecidos.json'));
 
@@ -137,6 +139,54 @@ handle('pickKey', async () => {
   pickedKeys.add(r.filePaths[0]);
   return r.filePaths[0];
 });
+
+// ---------- Envio de arquivos (PC -> servidor) ----------
+
+async function describe(paths) {
+  const out = [];
+  for (const p of paths) {
+    const st = await stat(p);
+    if (!st.isFile()) throw new Error(`${basename(p)} não é um arquivo (pastas inteiras ainda não são enviadas).`);
+    pickedFiles.add(p);
+    out.push({ local: p, name: basename(p), size: st.size });
+  }
+  return out;
+}
+
+handle('pickUpload', async () => {
+  const r = await dialog.showOpenDialog({ title: 'Escolha os arquivos para enviar ao servidor', properties: ['openFile', 'multiSelections'] });
+  return r.canceled ? [] : describe(r.filePaths);
+});
+// Arquivos arrastados do Windows: o caminho vem da ponte (webUtils), conferido aqui.
+handle('dropUpload', (a) => describe((a.paths || []).filter((p) => typeof p === 'string' && p)));
+handle('upload', async (a) => {
+  const o = need();
+  if (uploading) throw new Error('Já há um envio em andamento.');
+  const files = (a.files || []).map((f) => {
+    if (!pickedFiles.has(f.local)) throw new Error('Escolha os arquivos pelo botão ou arraste para a janela.');
+    return f;
+  });
+  const files2 = await describe(files.map((f) => f.local)); // tamanho atual, não o que a tela mandou
+  uploading = new AbortController();
+  let last = 0;
+  try {
+    return await o.uploadFiles(
+      { dir: a.dir, files: files2, conflict: a.conflict === 'replace' ? 'replace' : 'skip', owner: a.owner === 'conectado' ? 'conectado' : 'pasta' },
+      {
+        signal: uploading.signal,
+        onProgress: (p) => {
+          const now = Date.now();
+          if (now - last < 100 && p.sent < p.size) return;
+          last = now;
+          BrowserWindow.getAllWindows()[0]?.webContents.send('upload-progress', p);
+        },
+      }
+    );
+  } finally {
+    uploading = null;
+  }
+});
+handle('uploadCancel', async () => uploading?.abort());
 
 function createWindow() {
   const win = new BrowserWindow({

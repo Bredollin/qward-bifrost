@@ -191,3 +191,65 @@ test('su: elevação com senha de root', { skip: skip || (!E.BIFROST_TEST_ROOTPA
     s.close();
   }
 });
+
+// Envio de arquivos (PC -> servidor): SFTP como usuário comum, root põe no destino. Roda com sudo e com su.
+for (const metodo of ['sudo', 'su']) {
+  const pw = metodo === 'su' ? E.BIFROST_TEST_ROOTPASS : conn.password;
+  const pular = skip || (metodo === 'sudo' ? skipSudo : !pw && 'sem BIFROST_TEST_ROOTPASS');
+  test(`envio de arquivos (${metodo})`, { skip: pular }, async () => {
+    const s = await open(metodo, pw);
+    const dir = await mkdtemp(join(tmpdir(), 'bifrost-envio-'));
+    const audit = new Audit(join(dir, 'audit.log'));
+    const ops = new Ops(s, { policy, audit, tecnico: 'teste', host: 'srv-teste' });
+    const D = `${BASE}-envio-${metodo}`;
+    try {
+      // Pasta compartilhada só do root e de um grupo: o usuário conectado não escreve nela.
+      await s.run(`rm -rf ${D} && mkdir -p ${D} && chown root:daemon ${D} && chmod 2770 ${D} && printf antigo > ${D}/existe.txt`, { elevated: true });
+      const bin = Buffer.alloc(3 * 1024 * 1024 + 7);
+      for (let i = 0; i < bin.length; i++) bin[i] = (i * 31 + 7) & 255;
+      const { writeFile, stat } = await import('node:fs/promises');
+      const { createHash } = await import('node:crypto');
+      await writeFile(join(dir, "nome com espaço e 'aspas'.bin"), bin);
+      await writeFile(join(dir, 'existe.txt'), 'novo');
+      const files = await Promise.all(["nome com espaço e 'aspas'.bin", 'existe.txt'].map(async (name) =>
+        ({ local: join(dir, name), name, size: (await stat(join(dir, name))).size })));
+
+      let ultimo = null;
+      let r = await ops.uploadFiles({ dir: D, files, conflict: 'skip' }, { onProgress: (p) => (ultimo = p) });
+      assert.deepEqual(r.map((x) => x.status), ['enviado', 'pulado']);
+      assert.equal(ultimo.sentAll, bin.length);
+      const md5 = createHash('md5').update(bin).digest('hex');
+      const chk = await s.run(`cd ${D} && md5sum "nome com espaço e 'aspas'.bin" | cut -c1-32; stat -c '%U:%G %a' "nome com espaço e 'aspas'.bin"; cat existe.txt; echo; ls -A ~/.bifrost-envio 2>/dev/null | wc -l`, { elevated: true });
+      const [soma, donoPerm, conteudo] = chk.stdout.trim().split('\n');
+      assert.equal(soma, md5);
+      assert.equal(donoPerm, 'root:daemon 660'); // dono, grupo e permissão da pasta (2770 -> 660)
+      assert.equal(conteudo, 'antigo');
+
+      r = await ops.uploadFiles({ dir: D, files: files.slice(1), conflict: 'replace', owner: 'conectado' });
+      assert.deepEqual(r.map((x) => x.status), ['enviado']);
+      const c2 = await s.run(`cat ${D}/existe.txt; echo; stat -c '%U %a' ${D}/existe.txt`, { elevated: true });
+      assert.deepEqual(c2.stdout.trim().split('\n'), ['novo', `${conn.username} 644`]);
+      assert.equal((await s.run('ls -A ~/.bifrost-envio 2>/dev/null | wc -l')).stdout.trim(), '0'); // sem sobra temporária
+
+      // Bloqueios: fora da área, nome com barra, pasta com o mesmo nome.
+      await assert.rejects(ops.uploadFiles({ dir: '/etc', files: files.slice(1) }), /fora das pastas/);
+      await assert.rejects(ops.plan('upload', { dir: D, name: '../x', size: 1 }), /inválido/);
+      await assert.rejects(ops.plan('upload', { dir: D, name: 'a', size: 1, tmp: '/etc/shadow' }), /temporário inválido/);
+      await s.run(`mkdir ${D}/pasta`, { elevated: true });
+      await assert.rejects(ops.uploadFiles({ dir: D, files: [{ ...files[1], name: 'pasta' }], conflict: 'replace' }), /PASTA/);
+
+      // Cancelar no meio não deixa arquivo pela metade nem sobra na pasta temporária.
+      const ac = new AbortController();
+      r = await ops.uploadFiles({ dir: D, files: [{ ...files[0], name: 'cancelado.bin' }] }, { signal: ac.signal, onProgress: (p) => p.sent > 0 && ac.abort() });
+      assert.deepEqual(r.map((x) => x.status), ['cancelado']);
+      assert.equal((await s.run(`[ -e ${D}/cancelado.bin ] && echo sim || echo nao`, { elevated: true })).stdout.trim(), 'nao');
+
+      const log = (await readFile(join(dir, 'audit.log'), 'utf8')).trim().split('\n').map((l) => JSON.parse(l));
+      assert.ok(log.some((l) => l.op === 'upload' && l.ok && l.bytes === bin.length));
+      assert.ok(!JSON.stringify(log).includes(pw)); // senha nunca no registro
+      await s.run(`rm -rf ${D}`, { elevated: true });
+    } finally {
+      s.close();
+    }
+  });
+}

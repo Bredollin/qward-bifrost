@@ -205,3 +205,19 @@ dialog menu { display: flex; justify-content: flex-end; gap: 8px; padding: 0; ma
 .perm-grid td { text-align: center; }
 .perm-grid th { position: static; }
 details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin: 8px 0; }
+
+/* Envio de arquivos */
+.btn.enviar { border-color: #f9a02588; color: #ffd08a; }
+.btn.enviar .i { color: var(--warn); }
+#area-arquivos { position: relative; }
+.soltar { position: absolute; inset: 8px; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  border: 2px dashed var(--warn); border-radius: var(--radius); background: #0a2420e6; color: var(--warn); pointer-events: none; }
+.soltar .i { width: 32px; height: 32px; }
+.soltar .mono { color: var(--muted); }
+.envio-lista { max-height: 160px; overflow: auto; background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin: 4px 0 12px; font-size: 12px; }
+.envio-lista div { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+.envio-lista .existe { color: var(--warn); }
+.opcoes { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 12px; }
+.opcoes label { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; margin: 0; font-weight: 500; }
+.prog { height: 10px; background: var(--field); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin: 6px 0; }
+.prog > i { display: block; height: 100%; width: 0; background: var(--go); transition: width .15s; }
