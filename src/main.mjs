@@ -157,19 +157,20 @@ handle('pickUpload', async () => {
   const r = await dialog.showOpenDialog({ title: 'Escolha os arquivos para enviar ao servidor', properties: ['openFile', 'multiSelections'] });
   return r.canceled ? [] : describe(r.filePaths);
 });
-// Arquivos arrastados do Windows: o caminho vem da ponte (webUtils), conferido aqui.
+// Arquivos arrastados do Windows: só a ponte (preload) chama, com o caminho tirado do próprio arquivo solto (webUtils).
 handle('dropUpload', (a) => describe((a.paths || []).filter((p) => typeof p === 'string' && p)));
 handle('upload', async (a) => {
   const o = need();
   if (uploading) throw new Error('Já há um envio em andamento.');
-  const files = (a.files || []).map((f) => {
-    if (!pickedFiles.has(f.local)) throw new Error('Escolha os arquivos pelo botão ou arraste para a janela.');
-    return f;
-  });
-  const files2 = await describe(files.map((f) => f.local)); // tamanho atual, não o que a tela mandou
+  // Marca o envio antes de qualquer await: dois cliques não disparam dois envios.
   uploading = new AbortController();
   let last = 0;
   try {
+    const files = (a.files || []).map((f) => {
+      if (!pickedFiles.has(f.local)) throw new Error('Escolha os arquivos pelo botão ou arraste para a janela.');
+      return f;
+    });
+    const files2 = await describe(files.map((f) => f.local)); // tamanho atual, não o que a tela mandou
     return await o.uploadFiles(
       { dir: a.dir, files: files2, conflict: a.conflict === 'replace' ? 'replace' : 'skip', owner: a.owner === 'conectado' ? 'conectado' : 'pasta' },
       {

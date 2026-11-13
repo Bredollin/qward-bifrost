@@ -150,27 +150,9 @@ export class Ops {
         return mk(op, `Dar acesso total a ${user} em ${path} e TUDO dentro dela (vira dono, com ler, gravar e entrar)`,
           `chown -R ${q(user)} -- ${q(path)} && chmod -R u+rwX -- ${q(path)}`, 'alto');
       }
-      case 'upload': {
-        // Arquivo do PC do técnico para o servidor. Chega numa pasta temporária do usuário conectado
-        // (ver uploadFiles) e este comando, como root, põe no destino e acerta dono e permissão.
-        const name = cleanFileName(a.name);
-        const dir = await this.realpath(a.dir);
-        const path = checkWritable((dir === '/' ? '' : dir) + '/' + name, this.policy);
-        const tmp = a.tmp ? cleanStage(a.tmp) : '<pasta temporária do usuário>/' + name;
-        const asDir = a.owner !== 'conectado';
-        const exists = await this.s.run(`[ -e ${q(path)} ] || [ -L ${q(path)} ]`, { elevated: this.canElevate });
-        const replace = exists.code === 0;
-        if (replace && !a.replace) throw Object.assign(new Error(`Já existe: ${path}`), { code: 'EXISTS' });
-        if (replace && (await this.kind(path)) === 'pasta') throw new Error(`Já existe uma PASTA com esse nome: ${path}`);
-        // Permissão do arquivo = a da pasta sem o "executar" (ex.: pasta 2770 -> arquivo 660).
-        const fix = asDir
-          ? ` && chown "$(stat -c %u:%g -- ${q(dir)})" -- ${q(path)} && chmod "$(printf %o $((0$(stat -c %a -- ${q(dir)}) & 0666)))" -- ${q(path)}`
-          : ` && chmod 644 -- ${q(path)}`;
-        const cmd = `${replace ? '' : notExists(path)}mv -f -- ${q(tmp)} ${q(path)}${fix}`;
-        return mk(op, `${replace ? 'SUBSTITUIR' : 'Enviar'} ${path} (${fmtBytes(a.size)})` +
-          `${asDir ? ', com dono e permissão iguais aos da pasta' : ', dono = usuário conectado'}${replace ? '. O arquivo antigo some, não tem volta.' : ''}`,
-          cmd, replace ? 'alto' : 'baixo');
-      }
+      case 'upload':
+        // Só para mostrar o plano na tela; quem envia de verdade é uploadFiles (o temporário nunca vem da tela).
+        return this.planUpload(a, null);
       case 'move': {
         const from = checkWritable(await this.realpath(a.from, { mustExist: false }), this.policy);
         const to = checkWritable(await this.realpath(a.to, { mustExist: false }), this.policy);
@@ -232,6 +214,30 @@ export class Ops {
     }
   }
 
+  // Arquivo do PC do técnico para o servidor. Chega numa pasta temporária do usuário conectado
+  // (ver uploadFiles) e este comando, como root, põe no destino e acerta dono e permissão.
+  async planUpload(a, tmp) {
+    const name = cleanFileName(a.name);
+    const dir = await this.realpath(a.dir);
+    const path = checkWritable((dir === '/' ? '' : dir) + '/' + name, this.policy);
+    const src = tmp ? cleanStage(tmp) : '<pasta temporária do usuário>/' + name;
+    const asDir = a.owner !== 'conectado';
+    const exists = await this.s.run(`[ -e ${q(path)} ] || [ -L ${q(path)} ]`, { elevated: this.canElevate });
+    const replace = exists.code === 0;
+    if (replace && !a.replace) throw Object.assign(new Error(`Já existe: ${path}`), { code: 'EXISTS' });
+    // Só substitui arquivo comum: atalho (o mv entraria na pasta apontada) e pasta são recusados.
+    if (replace && (await this.kind(path)) !== 'arquivo') throw new Error(`Já existe uma PASTA ou ATALHO com esse nome: ${path}`);
+    // Permissão do arquivo = a da pasta sem o "executar" (ex.: pasta 2770 -> arquivo 660). Dono: o da pasta ou o usuário conectado.
+    const perm = `chmod "$(printf %o $((0$(stat -c %a -- ${q(dir)}) & 0666)))" -- ${q(path)}`;
+    const own = asDir ? `chown "$(stat -c %u:%g -- ${q(dir)})" -- ${q(path)} && ` : '';
+    // SELinux (RHEL/Rocky): o mv mantém o rótulo da pasta pessoal; restorecon devolve o rótulo do destino.
+    const selinux = `; command -v restorecon >/dev/null 2>&1 && restorecon -- ${q(path)} 2>/dev/null; true`;
+    const cmd = `${replace ? '' : notExists(path)}mv -f -- ${q(src)} ${q(path)} && ${own}${perm}${selinux}`;
+    return mk('upload', `${replace ? 'SUBSTITUIR' : 'Enviar'} ${path} (${fmtBytes(a.size)})` +
+      `, ${asDir ? 'com dono e permissão iguais aos da pasta' : 'dono = usuário conectado, permissão igual à da pasta'}${replace ? '. O arquivo antigo some, não tem volta.' : ''}`,
+      cmd, replace ? 'alto' : 'baixo');
+  }
+
   // Envia arquivos do PC para a pasta `dir`. files: [{ local, name, size }].
   // conflict: 'replace' | 'skip' (a tela pergunta antes quando o técnico escolhe "Perguntar").
   // Etapas por arquivo: plano (valida) -> SFTP como usuário conectado para ~/.bifrost-envio -> root move e acerta dono.
@@ -240,6 +246,14 @@ export class Ops {
     const st = await this.s.run('d="$HOME/.bifrost-envio"; mkdir -p "$d" && chmod 700 "$d" && cd "$d" && pwd -P');
     const stage = st.stdout.trim().split('\n').pop();
     if (st.code !== 0 || !stage?.startsWith('/')) throw new Error('Não foi possível criar a pasta temporária do envio no servidor (pasta pessoal do usuário).');
+    try {
+      return await this.#uploadEach(stage, { dir, files, conflict, owner }, { onProgress, signal });
+    } finally {
+      await this.s.run(`rmdir -- ${q(stage)} 2>/dev/null; true`).catch(() => {});
+    }
+  }
+
+  async #uploadEach(stage, { dir, files, conflict, owner }, { onProgress, signal }) {
     const total = files.reduce((t, f) => t + (Number(f.size) || 0), 0);
     let sentAll = 0;
     const result = [];
@@ -248,7 +262,7 @@ export class Ops {
       const args = { dir, name: f.name, size: f.size, owner, replace: conflict === 'replace' };
       let p;
       try {
-        p = await this.plan('upload', args);
+        p = await this.planUpload(args, null);
       } catch (e) {
         if (e.code === 'EXISTS') {
           result.push({ name: f.name, status: 'pulado', motivo: 'já existe' });
@@ -268,7 +282,7 @@ export class Ops {
             onProgress?.({ index: i, count: files.length, name: f.name, sent, size: f.size, sentAll: sentAll + sent, total });
           },
         });
-        p = await this.plan('upload', { ...args, tmp });
+        p = await this.planUpload(args, tmp);
         const r = await this.s.run(p.command, { elevated: this.canElevate });
         if (r.code !== 0) throw new Error(firstLine(r.stderr) || `Falhou (código ${r.code}).`);
         ok = true;
@@ -287,12 +301,12 @@ export class Ops {
         });
       }
     }
-    await this.s.run(`rmdir -- ${q(stage)} 2>/dev/null; true`).catch(() => {});
     for (const f of files.slice(result.length)) result.push({ name: f.name, status: 'cancelado' });
     return result;
   }
 
   async execute(op, a) {
+    if (op === 'upload') throw new Error('Use o envio de arquivos (uploadFiles).');
     const p = await this.plan(op, a);
     const started = Date.now();
     let ok = false, error = null;

@@ -228,13 +228,19 @@ for (const metodo of ['sudo', 'su']) {
       r = await ops.uploadFiles({ dir: D, files: files.slice(1), conflict: 'replace', owner: 'conectado' });
       assert.deepEqual(r.map((x) => x.status), ['enviado']);
       const c2 = await s.run(`cat ${D}/existe.txt; echo; stat -c '%U %a' ${D}/existe.txt`, { elevated: true });
-      assert.deepEqual(c2.stdout.trim().split('\n'), ['novo', `${conn.username} 644`]);
+      assert.deepEqual(c2.stdout.trim().split('\n'), ['novo', `${conn.username} 660`]);
       assert.equal((await s.run('ls -A ~/.bifrost-envio 2>/dev/null | wc -l')).stdout.trim(), '0'); // sem sobra temporária
 
       // Bloqueios: fora da área, nome com barra, pasta com o mesmo nome.
       await assert.rejects(ops.uploadFiles({ dir: '/etc', files: files.slice(1) }), /fora das pastas/);
       await assert.rejects(ops.plan('upload', { dir: D, name: '../x', size: 1 }), /inválido/);
-      await assert.rejects(ops.plan('upload', { dir: D, name: 'a', size: 1, tmp: '/etc/shadow' }), /temporário inválido/);
+      await assert.rejects(ops.planUpload({ dir: D, name: 'a', size: 1 }, '/etc/shadow'), /temporário inválido/);
+      await assert.rejects(ops.execute('upload', { dir: D, name: 'a', size: 1, tmp: '/home/x/.bifrost-envio/' + '0'.repeat(36) }), /uploadFiles/);
+      // Atalho para pasta com o mesmo nome: Substituir não pode entrar na pasta apontada nem mexer no dono dela.
+      await s.run(`mkdir -p ${D}-fora && ln -s ${D}-fora ${D}/lnk`, { elevated: true });
+      await assert.rejects(ops.uploadFiles({ dir: D, files: [{ ...files[1], name: 'lnk' }], conflict: 'replace' }), /ATALHO/);
+      assert.equal((await s.run(`ls -A ${D}-fora | wc -l; stat -c %U ${D}-fora`, { elevated: true })).stdout.trim(), '0\nroot');
+      assert.equal((await s.run('[ -e ~/.bifrost-envio ] && echo sobra || echo limpo')).stdout.trim(), 'limpo');
       await s.run(`mkdir ${D}/pasta`, { elevated: true });
       await assert.rejects(ops.uploadFiles({ dir: D, files: [{ ...files[1], name: 'pasta' }], conflict: 'replace' }), /PASTA/);
 
@@ -247,7 +253,7 @@ for (const metodo of ['sudo', 'su']) {
       const log = (await readFile(join(dir, 'audit.log'), 'utf8')).trim().split('\n').map((l) => JSON.parse(l));
       assert.ok(log.some((l) => l.op === 'upload' && l.ok && l.bytes === bin.length));
       assert.ok(!JSON.stringify(log).includes(pw)); // senha nunca no registro
-      await s.run(`rm -rf ${D}`, { elevated: true });
+      await s.run(`rm -rf ${D} ${D}-fora`, { elevated: true });
     } finally {
       s.close();
     }

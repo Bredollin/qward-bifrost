@@ -2,15 +2,19 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const ALLOWED = ['connect', 'disconnect', 'list', 'users', 'groups', 'plan', 'execute', 'audit', 'pickKey', 'elevate', 'dropElevation',
-  'pickUpload', 'dropUpload', 'upload', 'uploadCancel'];
+  'pickUpload', 'upload', 'uploadCancel'];
 
 contextBridge.exposeInMainWorld('bifrost', {
   call: (name, arg) => {
     if (!ALLOWED.includes(name)) return Promise.resolve({ ok: false, erro: 'Operação não permitida.' });
     return ipcRenderer.invoke(name, arg);
   },
-  // Caminho no Windows de um arquivo arrastado para a janela (o Electron não expõe mais File.path).
-  pathFor: (file) => webUtils.getPathForFile(file),
+  // Arquivos soltos na janela: o caminho sai do próprio File (webUtils), nunca de texto vindo da tela.
+  // Assim a tela não consegue pedir para enviar um arquivo qualquer do PC.
+  dropFiles: async (files) => {
+    const paths = [...files].map((f) => webUtils.getPathForFile(f)).filter(Boolean);
+    return ipcRenderer.invoke('dropUpload', { paths });
+  },
   onUploadProgress: (cb) => {
     const h = (_e, p) => cb(p);
     ipcRenderer.on('upload-progress', h);

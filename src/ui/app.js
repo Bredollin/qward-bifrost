@@ -395,8 +395,9 @@ $('#btn-enviar').addEventListener('click', async () => {
     aviso.hidden = true;
     if (!pode()) return status('Bloqueado: envio só na área liberada.', true);
     try {
-      const paths = [...ev.dataTransfer.files].map((f) => window.bifrost.pathFor(f)).filter(Boolean);
-      const files = await api('dropUpload', { paths });
+      const r = await window.bifrost.dropFiles(ev.dataTransfer.files);
+      if (!r.ok) throw new Error(r.erro);
+      const files = r.data;
       if (files.length) await enviar(files);
     } catch (e) {
       status(e.message, true);

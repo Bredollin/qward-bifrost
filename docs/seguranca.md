@@ -59,6 +59,8 @@ Toda alteração passa por uma tela com resumo em português, nível de risco e 
 ## Limites conhecidos
 
 - **Enviar arquivos**: o arquivo passa pela pasta pessoal do usuário conectado (`~/.bifrost-envio`, permissão 700) antes de o root mover. Precisa de espaço livre ali; em `/home` com cota pequena, arquivos grandes falham (a mensagem aparece e nada fica no destino).
+- Entre a conferência (já existe? é arquivo?) e o `mv` há um intervalo curto: alguém com escrita na pasta poderia trocar o arquivo por um atalho nesse meio tempo. Só importa com usuário mal-intencionado dentro da pasta compartilhada.
+- Substituir só vale para arquivo comum: atalho ou pasta com o mesmo nome são recusados.
 
 - **Acesso total** (`chown -R`/`chmod -R`) também altera um *hardlink* que esteja dentro da pasta e aponte para um arquivo de fora (mesmo disco). Só acontece se alguém criou o link; o Bifrost não procura por eles.
 - Dentro de `/home`, o Bifrost pode mudar dono e permissão das pastas de outros usuários (menos `.ssh`). É de propósito (pastas pessoais), mas exige atenção.
