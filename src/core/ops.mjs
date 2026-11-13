@@ -231,7 +231,7 @@ export class Ops {
     const perm = `chmod "$(printf %o $((0$(stat -c %a -- ${q(dir)}) & 0666)))" -- ${q(path)}`;
     const own = asDir ? `chown "$(stat -c %u:%g -- ${q(dir)})" -- ${q(path)} && ` : '';
     // SELinux (RHEL/Rocky): o mv mantém o rótulo da pasta pessoal; restorecon devolve o rótulo do destino.
-    const selinux = `; command -v restorecon >/dev/null 2>&1 && restorecon -- ${q(path)} 2>/dev/null; true`;
+    const selinux = ` && { command -v restorecon >/dev/null 2>&1 && restorecon -- ${q(path)} 2>/dev/null; true; }`;
     const cmd = `${replace ? '' : notExists(path)}mv -f -- ${q(src)} ${q(path)} && ${own}${perm}${selinux}`;
     return mk('upload', `${replace ? 'SUBSTITUIR' : 'Enviar'} ${path} (${fmtBytes(a.size)})` +
       `, ${asDir ? 'com dono e permissão iguais aos da pasta' : 'dono = usuário conectado, permissão igual à da pasta'}${replace ? '. O arquivo antigo some, não tem volta.' : ''}`,

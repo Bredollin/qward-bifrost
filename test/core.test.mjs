@@ -241,6 +241,9 @@ for (const metodo of ['sudo', 'su']) {
       await assert.rejects(ops.uploadFiles({ dir: D, files: [{ ...files[1], name: 'lnk' }], conflict: 'replace' }), /ATALHO/);
       assert.equal((await s.run(`ls -A ${D}-fora | wc -l; stat -c %U ${D}-fora`, { elevated: true })).stdout.trim(), '0\nroot');
       assert.equal((await s.run('[ -e ~/.bifrost-envio ] && echo sobra || echo limpo')).stdout.trim(), 'limpo');
+      // Falha do mv (temporário sumiu) precisa virar erro, não "enviado".
+      const pf = await ops.planUpload({ dir: D, name: 'falha.txt', size: 1 }, '/home/x/.bifrost-envio/' + '0'.repeat(36));
+      assert.notEqual((await s.run(pf.command, { elevated: true })).code, 0);
       await s.run(`mkdir ${D}/pasta`, { elevated: true });
       await assert.rejects(ops.uploadFiles({ dir: D, files: [{ ...files[1], name: 'pasta' }], conflict: 'replace' }), /PASTA/);
 
